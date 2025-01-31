@@ -1,0 +1,25 @@
+ERROR: 2025/01/12 03:10:02 ErrorController.go:34: author not found
+ERROR: 2025/01/12 03:11:52 ErrorController.go:34: author not found
+ERROR: 2025/01/12 03:17:08 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 12:20:01 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 12:20:52 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 12:21:00 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 12:21:43 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 12:23:53 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 13:04:59 ErrorController.go:34: author not found
+ERROR: 2025/01/12 13:17:44 ErrorController.go:34: author does not exist
+ERROR: 2025/01/12 13:36:47 ErrorController.go:34: book not found
+ERROR: 2025/01/12 13:58:40 ErrorController.go:34: book not found
+ERROR: 2025/01/12 14:01:04 ErrorController.go:34: insufficient stock for book ID 1
+ERROR: 2025/01/12 14:04:15 ErrorController.go:34: insufficient stock for book ID 1
+ERROR: 2025/01/12 14:05:31 ErrorController.go:34: insufficient stock for book ID 1
+ERROR: 2025/01/12 14:05:40 ErrorController.go:34: book not found
+ERROR: 2025/01/12 14:07:42 ErrorController.go:34: order not found
+ERROR: 2025/01/12 14:08:34 ErrorController.go:34: order not found
+ERROR: 2025/01/12 15:57:49 ErrorController.go:34: insufficient stock for book ID 1
+ERROR: 2025/01/12 16:25:15 ErrorController.go:34: invalid 'from' date format (use YYYY-MM-DD)
+ERROR: 2025/01/12 16:49:34 ErrorController.go:34: customer with ID 5 not found: customer not found
+ERROR: 2025/01/12 17:14:45 ErrorController.go:34: cannot delete author with ID 3: books are associated with this author
+ERROR: 2025/01/12 17:19:35 ErrorController.go:34: author with ID 6 does not exist: author not found
+ERROR: 2025/01/12 17:20:13 ErrorController.go:34: author not found
+ERROR: 2025/01/12 17:36:20 ErrorController.go:34: author with ID 9 does not exist: author not found
