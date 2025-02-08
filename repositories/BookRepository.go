@@ -41,7 +41,7 @@ func (r *BookRepository) CreateBook(book models.Book) (models.Book, error) {
 // GetBook fetches a book by ID
 func (r *BookRepository) GetBook(id int) (models.Book, error) {
 	var book models.Book
-	err := r.db.NewSelect().Model(&book).Where("id = ?", id).Relation("Author").Scan(context.Background())
+	err := r.db.NewSelect().Model(&book).Where("book.id = ?", id).Relation("Author").Scan(context.Background())
 	if err != nil {
 		return models.Book{}, fmt.Errorf("book not found: %w", err)
 	}

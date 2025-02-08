@@ -4,6 +4,7 @@ import (
 	"FinalProject/models"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -31,10 +32,30 @@ func NewOrderRepository(db *bun.DB) *OrderRepository {
 
 // CreateOrder inserts a new order
 func (r *OrderRepository) CreateOrder(order models.Order) (models.Order, error) {
-	_, err := r.db.NewInsert().Model(&order).Exec(context.Background())
+	// Insert Order
+	_, err := r.db.NewInsert().
+		Model(&order).
+		Returning("*").
+		Exec(context.Background())
 	if err != nil {
 		return models.Order{}, fmt.Errorf("error inserting order: %w", err)
 	}
+
+	log.Println("✅ Order inserted with ID:", order.ID)
+
+	// Insert Order Items
+	for i := range order.Items {
+		order.Items[i].OrderID = order.ID // ✅ Assign correct OrderID
+		_, err := r.db.NewInsert().
+			Model(&order.Items[i]).
+			Returning("*"). // ✅ Return the inserted row with ID
+			Exec(context.Background())
+		if err != nil {
+			return models.Order{}, fmt.Errorf("error inserting order item: %w", err)
+		}
+		log.Println("✅ Inserted order item:", order.Items[i])
+	}
+
 	return order, nil
 }
 
@@ -43,9 +64,10 @@ func (r *OrderRepository) GetOrder(id int) (models.Order, error) {
 	var order models.Order
 	err := r.db.NewSelect().
 		Model(&order).
-		Where("id = ?", id).
-		Relation("Customer"). // Include customer details
-		Relation("Items").    // Include order items
+		Where("?TableAlias.id = ?", id). // ✅ Uses Bun's table alias instead of hardcoding "orders"
+		Relation("Customer").
+		Relation("Items.Book").
+		Relation("Items.Book.Author").
 		Scan(context.Background())
 
 	if err != nil {
@@ -72,13 +94,15 @@ func (r *OrderRepository) ListOrders() ([]models.Order, error) {
 	var orders []models.Order
 	err := r.db.NewSelect().
 		Model(&orders).
-		Relation("Customer"). // Include customer info
-		Relation("Items").    // Include order items
+		Relation("Customer").          // ✅ Fetch customer info
+		Relation("Items.Book").        // ✅ Fetch books in the order items
+		Relation("Items.Book.Author"). // ✅ Fetch book authors
 		Scan(context.Background())
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving orders: %w", err)
 	}
+
 	return orders, nil
 }
 

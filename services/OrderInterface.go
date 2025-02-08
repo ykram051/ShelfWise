@@ -5,6 +5,7 @@ import (
 	"FinalProject/repositories"
 	"context"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -26,48 +27,48 @@ func (s *OrderService) CreateOrder(ctx context.Context, order models.Order) (mod
 	default:
 	}
 
-	tx, err := repositories.DB.BeginTx(ctx, nil)
-	if err != nil {
-		return models.Order{}, err
-	}
-	defer tx.Rollback()
-
 	customer, err := s.customerstore.GetCustomer(order.CustomerID)
 	if err != nil {
-		return models.Order{}, fmt.Errorf("customer with ID %d not found: %v", order.CustomerID, err)
+		return models.Order{}, fmt.Errorf("customer with ID %d not found: %w", order.CustomerID, err)
 	}
-	order.CustomerID = customer.ID
+	order.Customer = &customer  // ✅ Store Customer
 
+	var total float64
 	for i, item := range order.Items {
 		book, err := s.bookstore.GetBook(item.BookID)
 		if err != nil {
-			return models.Order{}, err
+			return models.Order{}, fmt.Errorf("book with ID %d not found: %w", item.BookID, err)
 		}
 
 		if book.Stock < item.Quantity {
 			return models.Order{}, fmt.Errorf("insufficient stock for book ID %d", item.BookID)
 		}
 
+		// ✅ Deduct stock and update book
 		book.Stock -= item.Quantity
-		if _, err := s.bookstore.UpdateBook(item.BookID, book); err != nil {
+		if _, err := s.bookstore.UpdateBook(book.ID, book); err != nil {
 			return models.Order{}, err
 		}
 
-		order.Items[i].BookID = book.ID
+		// ✅ Calculate total price
+		total += float64(item.Quantity) * book.Price
+
+		// ✅ Store the book inside the order items
+		order.Items[i].Book = &book
 	}
+
+	order.TotalPrice = total  // ✅ Ensure TotalPrice is saved
+	order.Status = "Created"  // ✅ Set Status
 
 	createdOrder, err := s.store.CreateOrder(order)
 	if err != nil {
 		return models.Order{}, err
 	}
 
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		return models.Order{}, err
-	}
-
+	log.Println("✅ Order successfully created:", createdOrder)
 	return createdOrder, nil
 }
+
 
 // GetOrder retrieves an order
 func (s *OrderService) GetOrder(ctx context.Context, id int) (models.Order, error) {

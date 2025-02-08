@@ -30,9 +30,6 @@ type AuthorStore interface {
 }
 
 func (r *AuthorRepository) CreateAuthor(author models.Author) (models.Author, error) {
-	// Ensure first_name & last_name are being passed
-	log.Println("🔹 Inserting Author:", author.FirstName, author.LastName, author.Bio)
-
 	
 	_, err := r.db.NewInsert().Model(&author).Returning("*").Exec(context.Background())
 	if err != nil {
@@ -68,13 +65,23 @@ func (r *AuthorRepository) UpdateAuthor(id int, author models.Author) (models.Au
 	return author, nil
 }
 func (r *AuthorRepository) DeleteAuthor(id int) error {
-	_, err := r.db.NewDelete().
+	// Check if the author exists
+	var author models.Author
+	err := r.db.NewSelect().Model(&author).Where("id = ?", id).Scan(context.Background())
+	if err != nil {
+		log.Println("Author not found:", err)
+		return fmt.Errorf("author not found: %w", err)
+	}
+
+	// Delete the author
+	_, err = r.db.NewDelete().
 		Model((*models.Author)(nil)).
 		Where("id = ?", id).
 		Exec(context.Background())
 	if err != nil {
 		return fmt.Errorf("error deleting author: %w", err)
 	}
+	log.Println("✅ Author successfully deleted:", id)
 	return nil
 }
 

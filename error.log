@@ -26,3 +26,53 @@ ERROR: 2025/01/12 17:36:20 ErrorController.go:34: author with ID 9 does not exis
 ERROR: 2025/02/06 19:03:22 ErrorController.go:34: error inserting customer: ERROR: relation "customers" does not exist (SQLSTATE=42P01)
 ERROR: 2025/02/06 22:16:43 ErrorController.go:34: error deleting author: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
 ERROR: 2025/02/07 00:17:20 ErrorController.go:34: Invalid JSON
+ERROR: 2025/02/08 12:16:08 ErrorController.go:34: error deleting author: author not found: sql: no rows in result set
+ERROR: 2025/02/08 12:17:33 ErrorController.go:34: error deleting author: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/08 12:18:02 ErrorController.go:34: error deleting author: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/08 12:18:35 ErrorController.go:34: invalid author ID
+ERROR: 2025/02/08 12:29:41 ErrorController.go:34: customer with ID 0 not found: customer not found: sql: no rows in result set
+ERROR: 2025/02/08 12:31:36 ErrorController.go:34: customer with ID 0 not found: customer not found: sql: no rows in result set
+ERROR: 2025/02/08 12:31:42 ErrorController.go:34: book not found: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:31:54 ErrorController.go:34: book not found: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:32:12 ErrorController.go:34: book not found: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:32:58 ErrorController.go:34: book not found: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:33:06 ErrorController.go:34: book not found: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:34:41 ErrorController.go:34: book not found: sql: no rows in result set
+ERROR: 2025/02/08 12:51:21 ErrorController.go:34: error retrieving orders: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 12:53:03 ErrorController.go:34: error retrieving orders: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 12:53:20 ErrorController.go:34: error retrieving orders: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 12:55:45 ErrorController.go:34: error retrieving order: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 12:55:50 ErrorController.go:34: error retrieving order: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 12:58:38 ErrorController.go:34: error retrieving order: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:59:16 ErrorController.go:34: error retrieving order: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 12:59:56 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:00:15 ErrorController.go:34: book not found: sql: no rows in result set
+ERROR: 2025/02/08 13:01:40 ErrorController.go:34: error retrieving order: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 13:02:07 ErrorController.go:34: error retrieving order: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 13:03:39 ErrorController.go:34: error retrieving order: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 13:03:46 ErrorController.go:34: error retrieving order: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 13:07:03 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:10:20 ErrorController.go:34: error retrieving order: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 13:13:15 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:14:45 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:14:59 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:15:02 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:15:04 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:16:50 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:18:57 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:19:09 ErrorController.go:34: book not found: sql: no rows in result set
+ERROR: 2025/02/08 13:19:36 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:20:07 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:21:34 ErrorController.go:34: error retrieving order: ERROR: missing FROM-clause entry for table "o" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:24:14 ErrorController.go:34: error retrieving order: ERROR: missing FROM-clause entry for table "o" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:26:30 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:26:47 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:29:58 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:31:14 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:33:21 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:34:55 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:37:35 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:42:35 ErrorController.go:34: error retrieving order: ERROR: invalid reference to FROM-clause entry for table "order" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:44:38 ErrorController.go:34: order not found: ERROR: syntax error at or near "order" (SQLSTATE=42601)
+ERROR: 2025/02/08 13:46:47 ErrorController.go:34: order not found: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
+ERROR: 2025/02/08 13:49:53 ErrorController.go:34: order not found: sql: no rows in result set

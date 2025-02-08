@@ -24,21 +24,12 @@ func NewBookService(bookStore repositories.BookStore, authorStore repositories.A
 func (bs *BookService) CreateBook(ctx context.Context, book models.Book) (models.Book, error) {
 	log.Println("🔵 Inside BookService.CreateBook()")
 
-	// Check if authorStore is nil
-	if bs.authorStore == nil {
-		log.Fatal("❌ ERROR: AuthorRepository (bs.authorStore) is nil!")
-	}
-
 	select {
 	case <-ctx.Done():
 		log.Println("❌ Context expired")
 		return models.Book{}, ctx.Err()
 	default:
 	}
-	log.Println("🔹 Received Author:", book.Author)
-	log.Println("🔹 Author First Name:", book.Author.FirstName)
-	log.Println("🔹 Author Last Name:", book.Author.LastName)
-	log.Println("🔹 Author Bio:", book.Author.Bio)
 
 	log.Println("🟢 Checking if author exists...")
 	if book.Author == nil {
@@ -47,34 +38,30 @@ func (bs *BookService) CreateBook(ctx context.Context, book models.Book) (models
 	}
 
 	if book.AuthorID > 0 {
-		_, err := bs.authorStore.GetAuthor(book.AuthorID)
+		// Fetch author by ID
+		author, err := bs.authorStore.GetAuthor(book.AuthorID)
 		if err != nil {
 			log.Println("❌ Author does not exist")
 			return models.Book{}, fmt.Errorf("author with ID %d does not exist: %w", book.AuthorID, err)
 		}
+		book.Author = &author
 	} else {
 		log.Println("🟢 Creating new author...")
 
-		if bs.authorStore == nil {
-			log.Fatal("❌ ERROR: bs.authorStore is nil before calling CreateAuthor!")
+		// Ensure valid author details
+		if book.Author.FirstName == "" || book.Author.LastName == "" {
+			return models.Book{}, fmt.Errorf("author first name and last name cannot be empty")
 		}
 
-		if book.Author == nil {
-			log.Fatal("❌ ERROR: book.Author is nil before calling CreateAuthor!")
-			book.Author = &models.Author{}
-		}
-
-		// FIX: Ensure we pass a valid Author object
-		newAuthor, err := bs.authorStore.CreateAuthor(models.Author{
-			FirstName: book.Author.FirstName,
-			LastName:  book.Author.LastName,
-			Bio:       book.Author.Bio,
-		})
+		newAuthor, err := bs.authorStore.CreateAuthor(*book.Author)
 		if err != nil {
 			log.Println("❌ Failed to create author:", err)
 			return models.Book{}, fmt.Errorf("failed to create author: %w", err)
 		}
+
+		// Assign correct AuthorID
 		book.AuthorID = newAuthor.ID
+		book.Author = &newAuthor // ✅ FIX: Assign full Author object
 	}
 
 	log.Println("🟢 Inserting book into DB...")

@@ -143,7 +143,7 @@ func main() {
 		}
 	})
 
-	log.Println("✅ Server running on port 8086...")
+	log.Println("Server running on port 8086...")
 	if err := http.ListenAndServe(":8086", nil); err != nil {
 		log.Fatal(err)
 	}
