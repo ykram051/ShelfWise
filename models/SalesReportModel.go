@@ -1,10 +1,16 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/uptrace/bun"
+)
 
 type SalesReport struct {
-	Timestamp       time.Time   `json:"timestamp"`
-	TotalRevenue    float64     `json:"total_revenue"`
-	TotalOrders     int         `json:"total_orders"`
-	TopSellingBooks []BookSales `json:"top_selling_books"`
+	bun.BaseModel    `bun:"table:sales_reports"`
+	ID               int         `bun:",pk,autoincrement"`
+	Timestamp        time.Time   `bun:",nullzero,notnull,default:current_timestamp"`
+	TotalRevenue     float64     `bun:",notnull"`
+	TotalOrders      int         `bun:",notnull"`
+	TopSellingBooks  []BookSales `bun:"rel:has-many,join:id=book_id"`
 }

@@ -10,28 +10,34 @@ import (
 )
 
 func main() {
-	bookRepo := repositories.NewInMemoryBookStore("./books.json")
-	authorRepo := repositories.NewInMemoryAuthorStore("./authors.json")
-	customerRepo := repositories.NewInMemoryCustomerStore("./customers.json")
-	orderRepo := repositories.NewInMemoryOrderStore("./orders.json")
+	// Initialize PostgreSQL Database
+	repositories.InitDB()
+	defer repositories.CloseDB()
 
-	// Services
+	// Initialize repositories with Bun DB
+	authorRepo := repositories.NewAuthorRepository(repositories.DB)
+	bookRepo := repositories.NewBookRepository(repositories.DB)
+	customerRepo := repositories.NewCustomerRepository(repositories.DB)
+	orderRepo := repositories.NewOrderRepository(repositories.DB)
+
+	// Initialize services
+	authorService := services.NewAuthorService(authorRepo)
 	bookService := services.NewBookService(bookRepo, authorRepo)
-	reportService := services.NewReportService(orderRepo)
-	authorService := services.NewAuthorService(authorRepo, bookRepo)
 	customerService := services.NewCustomerService(customerRepo)
 	orderService := services.NewOrderService(orderRepo, bookRepo, customerRepo)
+	reportService := services.NewReportService(orderRepo)
 
-	// Controllers
-	bookController := controllers.NewBookController(bookService)
+	// Initialize controllers
 	authorController := controllers.NewAuthorController(authorService)
+	bookController := controllers.NewBookController(bookService)
 	customerController := controllers.NewCustomerController(customerService)
 	orderController := controllers.NewOrderController(orderService)
 	reportController := controllers.NewReportController(reportService)
 
+	// Start Daily Report Job
 	views.StartDailyReportJob(reportService)
 
-	// Books
+	// Books Routes
 	http.HandleFunc("/books", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -54,13 +60,14 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	// Authors
+
+	// Authors Routes
 	http.HandleFunc("/authors", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			authorController.CreateAuthor(w, r)
 		case http.MethodGet:
-			authorController.GetAuthor(w, r)
+			authorController.ListAuthors(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -78,13 +85,13 @@ func main() {
 		}
 	})
 
-	// Customers
+	// Customers Routes
 	http.HandleFunc("/customers", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			customerController.CreateCustomer(w, r)
 		case http.MethodGet:
-			customerController.GetCustomer(w, r)
+			customerController.ListCustomers(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -102,13 +109,13 @@ func main() {
 		}
 	})
 
-	// Orders
+	// Orders Routes
 	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			orderController.CreateOrder(w, r)
 		case http.MethodGet:
-			orderController.GetOrder(w, r)
+			orderController.ListOrders(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -125,6 +132,8 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	// Reports Route
 	http.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -134,13 +143,8 @@ func main() {
 		}
 	})
 
-	log.Println("Server running on 8086")
+	log.Println("✅ Server running on port 8086...")
 	if err := http.ListenAndServe(":8086", nil); err != nil {
 		log.Fatal(err)
 	}
-
-	bookRepo.Save()
-	authorRepo.Save()
-	customerRepo.Save()
-	orderRepo.Save()
 }

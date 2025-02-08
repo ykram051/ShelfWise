@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"FinalProject/models"
-	"FinalProject/repositories"
 	"FinalProject/services"
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,14 +26,21 @@ func (bc *BookController) CreateBook(w http.ResponseWriter, r *http.Request) {
 
 	var book models.Book
 	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
-		WriteJSONError(w, http.StatusBadRequest, err.Error())
+		log.Println("❌ JSON Decode Error:", err) // LOG ERROR
+		WriteJSONError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
+
+	log.Println("🟢 JSON Parsed Successfully:", book) // CHECK JSON PARSING
+
 	created, err := bc.service.CreateBook(ctx, book)
 	if err != nil {
+		log.Println("❌ Service Error:", err) // LOG ERROR
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	log.Println("✅ Book created successfully:", created) // LOG SUCCESS
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(created)
 }
@@ -119,7 +126,7 @@ func (bc *BookController) SearchBooks(w http.ResponseWriter, r *http.Request) {
 	author := r.URL.Query().Get("author")
 	genre := r.URL.Query().Get("genre")
 
-	criteria := repositories.SearchCriteria{
+	criteria := models.SearchCriteria{
 		Title:  title,
 		Author: author,
 		Genre:  genre,

@@ -3,6 +3,7 @@ package services
 import (
 	"FinalProject/models"
 	"FinalProject/repositories"
+	"context"
 	"time"
 )
 
@@ -14,7 +15,13 @@ func NewReportService(os repositories.OrderStore) *ReportService {
 	return &ReportService{orderStore: os}
 }
 
-func (rs *ReportService) GenerateSalesReport(from, to time.Time) (models.SalesReport, error) {
+func (rs *ReportService) GenerateSalesReport(ctx context.Context, from, to time.Time) (models.SalesReport, error) {
+	select {
+	case <-ctx.Done():
+		return models.SalesReport{}, ctx.Err()
+	default:
+	}
+
 	orders, err := rs.orderStore.GetOrdersByDateRange(from, to)
 	if err != nil {
 		return models.SalesReport{}, err
@@ -23,29 +30,28 @@ func (rs *ReportService) GenerateSalesReport(from, to time.Time) (models.SalesRe
 	totalRevenue := 0.0
 	totalOrders := len(orders)
 	bookSalesMap := make(map[int]int)
-	bookMap := make(map[int]models.Book)
+	bookMap := make(map[int]*models.Book) // ✅ Store pointers instead of values
 
 	for _, o := range orders {
 		totalRevenue += o.TotalPrice
 		for _, item := range o.Items {
-			bookSalesMap[item.Book.ID] += item.Quantity
-			bookMap[item.Book.ID] = item.Book
+			bookSalesMap[item.BookID] += item.Quantity
+			bookMap[item.BookID] = item.Book // ✅ Store the pointer directly
 		}
 	}
 
 	var topSelling []models.BookSales
 	for bookID, qty := range bookSalesMap {
 		topSelling = append(topSelling, models.BookSales{
-			Book:     bookMap[bookID],
+			Book:     bookMap[bookID], // ✅ Now bookMap[bookID] is a pointer (*models.Book)
 			Quantity: qty,
 		})
 	}
 
-	report := models.SalesReport{
+	return models.SalesReport{
 		Timestamp:       time.Now(),
 		TotalRevenue:    totalRevenue,
 		TotalOrders:     totalOrders,
 		TopSellingBooks: topSelling,
-	}
-	return report, nil
+	}, nil
 }

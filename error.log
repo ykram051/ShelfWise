@@ -23,3 +23,6 @@ ERROR: 2025/01/12 17:14:45 ErrorController.go:34: cannot delete author with ID 3
 ERROR: 2025/01/12 17:19:35 ErrorController.go:34: author with ID 6 does not exist: author not found
 ERROR: 2025/01/12 17:20:13 ErrorController.go:34: author not found
 ERROR: 2025/01/12 17:36:20 ErrorController.go:34: author with ID 9 does not exist: author not found
+ERROR: 2025/02/06 19:03:22 ErrorController.go:34: error inserting customer: ERROR: relation "customers" does not exist (SQLSTATE=42P01)
+ERROR: 2025/02/06 22:16:43 ErrorController.go:34: error deleting author: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/07 00:17:20 ErrorController.go:34: Invalid JSON

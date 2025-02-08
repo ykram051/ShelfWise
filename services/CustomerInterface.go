@@ -59,6 +59,3 @@ func (s *CustomerService) ListCustomers(ctx context.Context) ([]models.Customer,
 	return s.store.ListCustomers()
 }
 
-func (s *CustomerService) SaveChanges() error {
-	return s.store.Save()
-}

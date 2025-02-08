@@ -1,14 +1,15 @@
 package repositories
 
 import (
-	"errors"
+	"FinalProject/models"
+	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	"FinalProject/models"
+	"github.com/uptrace/bun"
 )
 
+// OrderStore interface
 type OrderStore interface {
 	CreateOrder(o models.Order) (models.Order, error)
 	GetOrder(id int) (models.Order, error)
@@ -16,124 +17,88 @@ type OrderStore interface {
 	DeleteOrder(id int) error
 	ListOrders() ([]models.Order, error)
 	GetOrdersByDateRange(from, to time.Time) ([]models.Order, error)
-	Save() error
 }
 
-type InMemoryOrderStore struct {
-	orders  map[int]models.Order
-	nextID  int
-	mu      sync.Mutex
-	backend string
+// PostgreSQL-backed implementation of OrderStore
+type OrderRepository struct {
+	db *bun.DB
 }
 
-func NewInMemoryOrderStore(fileName string) *InMemoryOrderStore {
-	store := &InMemoryOrderStore{
-		orders:  make(map[int]models.Order),
-		backend: fileName,
-	}
-	LoadFromFile(fileName, &store.orders, &store.mu)
-
-	for id := range store.orders {
-		if id > store.nextID {
-			store.nextID = id
-		}
-	}
-	return store
+// NewOrderRepository returns a new instance
+func NewOrderRepository(db *bun.DB) *OrderRepository {
+	return &OrderRepository{db: db}
 }
 
-func (s *InMemoryOrderStore) CreateOrder(o models.Order) (models.Order, error) {
-	s.mu.Lock()
-	s.nextID++
-	o.ID = s.nextID
-	o.CreatedAt = time.Now().UTC()
-	var total float64
-	for _, item := range o.Items {
-		total += item.Book.Price * float64(item.Quantity)
-	}
-	o.TotalPrice = total
-	o.Status = "Created"
-
-	s.orders[o.ID] = o
-	s.mu.Unlock()
-	err := s.Save()
+// CreateOrder inserts a new order
+func (r *OrderRepository) CreateOrder(order models.Order) (models.Order, error) {
+	_, err := r.db.NewInsert().Model(&order).Exec(context.Background())
 	if err != nil {
-		return models.Order{}, fmt.Errorf("error saving orders: %v", err)
-	}
-	return o, nil
-}
-
-func (s *InMemoryOrderStore) GetOrder(id int) (models.Order, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	order, ok := s.orders[id]
-	if !ok {
-		return models.Order{}, errors.New("order not found")
+		return models.Order{}, fmt.Errorf("error inserting order: %w", err)
 	}
 	return order, nil
 }
 
-func (s *InMemoryOrderStore) UpdateOrder(id int, o models.Order) (models.Order, error) {
-	s.mu.Lock()
-	_, ok := s.orders[id]
-	if !ok {
-		return models.Order{}, errors.New("order not found")
-	}
-	o.ID = id
-	var total float64
-	for _, item := range o.Items {
-		total += item.Book.Price * float64(item.Quantity)
-	}
-	o.TotalPrice = total
-	s.orders[id] = o
-	s.mu.Unlock()
-	err := s.Save()
+// GetOrder fetches an order by ID with related customer and items
+func (r *OrderRepository) GetOrder(id int) (models.Order, error) {
+	var order models.Order
+	err := r.db.NewSelect().
+		Model(&order).
+		Where("id = ?", id).
+		Relation("Customer"). // Include customer details
+		Relation("Items").    // Include order items
+		Scan(context.Background())
+
 	if err != nil {
-		return models.Order{}, fmt.Errorf("error saving orders: %v", err)
+		return models.Order{}, fmt.Errorf("order not found: %w", err)
 	}
-	return o, nil
+	return order, nil
 }
 
-func (s *InMemoryOrderStore) DeleteOrder(id int) error {
-	s.mu.Lock()
-	if _, ok := s.orders[id]; !ok {
-		return errors.New("order not found")
-	}
-	delete(s.orders, id)
-	s.mu.Unlock()
-
-	err := s.Save()
+// GetOrdersByDateRange fetches orders in a time range
+func (r *OrderRepository) GetOrdersByDateRange(from, to time.Time) ([]models.Order, error) {
+	var orders []models.Order
+	err := r.db.NewSelect().
+		Model(&orders).
+		Where("created_at BETWEEN ? AND ?", from, to).
+		Scan(context.Background())
 	if err != nil {
-		return fmt.Errorf("error saving orders: %v", err)
+		return nil, fmt.Errorf("error retrieving orders: %w", err)
 	}
-	return nil
+	return orders, nil
 }
 
-func (s *InMemoryOrderStore) ListOrders() ([]models.Order, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var result []models.Order
-	for _, o := range s.orders {
-		result = append(result, o)
+// ListOrders fetches all orders with relationships
+func (r *OrderRepository) ListOrders() ([]models.Order, error) {
+	var orders []models.Order
+	err := r.db.NewSelect().
+		Model(&orders).
+		Relation("Customer"). // Include customer info
+		Relation("Items").    // Include order items
+		Scan(context.Background())
+
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving orders: %w", err)
 	}
-	return result, nil
+	return orders, nil
 }
 
-func (s *InMemoryOrderStore) GetOrdersByDateRange(from, to time.Time) ([]models.Order, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var results []models.Order
-	for _, o := range s.orders {
-		if (o.CreatedAt.Equal(from) || o.CreatedAt.After(from)) &&
-			(o.CreatedAt.Equal(to) || o.CreatedAt.Before(to)) {
-			results = append(results, o)
-		}
+// UpdateOrder modifies an existing order
+func (r *OrderRepository) UpdateOrder(id int, order models.Order) (models.Order, error) {
+	_, err := r.db.NewUpdate().
+		Model(&order).
+		Where("id = ?", id).
+		Exec(context.Background())
+
+	if err != nil {
+		return models.Order{}, fmt.Errorf("error updating order: %w", err)
 	}
-	return results, nil
+	return order, nil
 }
 
-func (s *InMemoryOrderStore) Save() error {
-	if err := SaveToFile(s.backend, s.orders, &s.mu); err != nil {
-		return fmt.Errorf("error saving orders: %v", err)
+func (r *OrderRepository) DeleteOrder(id int) error {
+	_, err := r.db.NewDelete().Model((*models.Order)(nil)).Where("id = ?", id).Exec(context.Background())
+	if err != nil {
+		return fmt.Errorf("error deleting order: %w", err)
 	}
 	return nil
 }

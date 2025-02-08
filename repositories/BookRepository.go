@@ -2,151 +2,100 @@ package repositories
 
 import (
 	"FinalProject/models"
-	"errors"
+	"context"
 	"fmt"
 	"strings"
-	"sync"
+
+	"github.com/uptrace/bun"
 )
 
-type SearchCriteria struct {
-	Title  string
-	Author string
-	Genre  string
-}
-
+// BookStore interface
 type BookStore interface {
 	CreateBook(book models.Book) (models.Book, error)
 	GetBook(id int) (models.Book, error)
 	UpdateBook(id int, book models.Book) (models.Book, error)
 	DeleteBook(id int) error
-	SearchBooks(criteria SearchCriteria) ([]models.Book, error)
+	SearchBooks(criteria models.SearchCriteria) ([]models.Book, error)
 	ListBooks() ([]models.Book, error)
-	Save() error
 }
 
-type InMemoryBookStore struct {
-	books   map[int]models.Book
-	nextID  int
-	mu      sync.Mutex
-	backend string // "books.json"
+// PostgreSQL-backed implementation of BookStore
+type BookRepository struct {
+	db *bun.DB
 }
 
-func NewInMemoryBookStore(fileName string) *InMemoryBookStore {
-	store := &InMemoryBookStore{
-		books:   make(map[int]models.Book),
-		backend: fileName,
-	}
-	LoadFromFile(fileName, &store.books, &store.mu)
-
-	for id := range store.books {
-		if id > store.nextID {
-			store.nextID = id
-		}
-	}
-	return store
+// NewBookRepository returns a new instance
+func NewBookRepository(db *bun.DB) *BookRepository {
+	return &BookRepository{db: db}
 }
 
-func (s *InMemoryBookStore) CreateBook(book models.Book) (models.Book, error) {
-	s.mu.Lock()
-	s.nextID++
-	book.ID = s.nextID
-	s.books[book.ID] = book
-	s.mu.Unlock()
-	err := s.Save()
+// CreateBook inserts a new book
+func (r *BookRepository) CreateBook(book models.Book) (models.Book, error) {
+	_, err := r.db.NewInsert().Model(&book).Exec(context.Background())
 	if err != nil {
-		return models.Book{}, fmt.Errorf("error saving books: %v", err)
+		return models.Book{}, fmt.Errorf("error inserting book: %w", err)
 	}
 	return book, nil
 }
 
-func (s *InMemoryBookStore) GetBook(id int) (models.Book, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	book, ok := s.books[id]
-	if !ok {
-		return models.Book{}, errors.New("book not found")
+// GetBook fetches a book by ID
+func (r *BookRepository) GetBook(id int) (models.Book, error) {
+	var book models.Book
+	err := r.db.NewSelect().Model(&book).Where("id = ?", id).Relation("Author").Scan(context.Background())
+	if err != nil {
+		return models.Book{}, fmt.Errorf("book not found: %w", err)
 	}
-
 	return book, nil
 }
 
-func (s *InMemoryBookStore) UpdateBook(id int, book models.Book) (models.Book, error) {
-	s.mu.Lock()
-	if _, ok := s.books[id]; !ok {
-		s.mu.Unlock()
-		return models.Book{}, errors.New("book not found")
-	}
+// UpdateBook modifies an existing book
+func (r *BookRepository) UpdateBook(id int, book models.Book) (models.Book, error) {
 	book.ID = id
-	s.books[id] = book
-	s.mu.Unlock()
-
-	err := s.Save()
+	_, err := r.db.NewUpdate().Model(&book).Where("id = ?", id).Exec(context.Background())
 	if err != nil {
-		return models.Book{}, fmt.Errorf("error saving the updated books: %v", err)
+		return models.Book{}, fmt.Errorf("error updating book: %w", err)
 	}
 	return book, nil
 }
 
-func (s *InMemoryBookStore) DeleteBook(id int) error {
-	s.mu.Lock()
-
-	if _, ok := s.books[id]; !ok {
-		s.mu.Unlock()
-		return errors.New("book not found")
-	}
-	delete(s.books, id)
-	s.mu.Unlock()
-	err := s.Save()
+// DeleteBook removes a book
+func (r *BookRepository) DeleteBook(id int) error {
+	_, err := r.db.NewDelete().Model((*models.Book)(nil)).Where("id = ?", id).Exec(context.Background())
 	if err != nil {
-		return fmt.Errorf("error saving books after the delete: %v", err)
+		return fmt.Errorf("error deleting book: %w", err)
 	}
 	return nil
 }
 
-func (s *InMemoryBookStore) SearchBooks(criteria SearchCriteria) ([]models.Book, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// SearchBooks filters books by criteria
+func (r *BookRepository) SearchBooks(criteria models.SearchCriteria) ([]models.Book, error) {
+	var books []models.Book
+	query := r.db.NewSelect().Model(&books).Relation("Author")
 
-	var results []models.Book
-	for _, book := range s.books {
-		if criteria.Title != "" && !strings.Contains(strings.ToLower(book.Title), strings.ToLower(criteria.Title)) {
-			continue
-		}
-		fullName := strings.ToLower(book.Author.FirstName + " " + book.Author.LastName)
-		if criteria.Author != "" && !strings.Contains(fullName, strings.ToLower(criteria.Author)) {
-			continue
-		}
-		if criteria.Genre != "" {
-			match := false
-			for _, g := range book.Genres {
-				if strings.EqualFold(g, criteria.Genre) {
-					match = true
-					break
-				}
-			}
-			if !match {
-				continue
-			}
-		}
-		results = append(results, book)
+	if criteria.Title != "" {
+		query = query.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(criteria.Title)+"%")
 	}
-	return results, nil
-}
-func (s *InMemoryBookStore) ListBooks() ([]models.Book, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if criteria.Author != "" {
+		query = query.Join("JOIN authors ON authors.id = books.author_id").
+			Where("LOWER(authors.first_name || ' ' || authors.last_name) LIKE ?", "%"+strings.ToLower(criteria.Author)+"%")
+	}
+	if criteria.Genre != "" {
+		query = query.Where("? = ANY(genres)", criteria.Genre)
+	}
 
-	var result []models.Book
-	for _, b := range s.books {
-		result = append(result, b)
+	err := query.Scan(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error searching books: %w", err)
 	}
-	return result, nil
+	return books, nil
 }
 
-func (s *InMemoryBookStore) Save() error {
-	if err := SaveToFile(s.backend, s.books, &s.mu); err != nil {
-		return fmt.Errorf("error saving books: %v", err)
+// ListBooks fetches all books
+func (r *BookRepository) ListBooks() ([]models.Book, error) {
+	var books []models.Book
+	err := r.db.NewSelect().Model(&books).Relation("Author").Scan(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving books: %w", err)
 	}
-	return nil
+	return books, nil
 }

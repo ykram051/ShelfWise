@@ -1,112 +1,76 @@
 package repositories
 
 import (
-	"errors"
-	"fmt"
-	"sync"
-	"time"
-
 	"FinalProject/models"
+	"context"
+	"fmt"
+
+	"github.com/uptrace/bun"
 )
 
+// CustomerStore interface
 type CustomerStore interface {
 	CreateCustomer(c models.Customer) (models.Customer, error)
 	GetCustomer(id int) (models.Customer, error)
 	UpdateCustomer(id int, c models.Customer) (models.Customer, error)
 	DeleteCustomer(id int) error
 	ListCustomers() ([]models.Customer, error)
-	Save() error
 }
 
-type InMemoryCustomerStore struct {
-	customers map[int]models.Customer
-	nextID    int
-	mu        sync.Mutex
-	backend   string
+// PostgreSQL-backed implementation of CustomerStore
+type CustomerRepository struct {
+	db *bun.DB
 }
 
-func NewInMemoryCustomerStore(fileName string) *InMemoryCustomerStore {
-	store := &InMemoryCustomerStore{
-		customers: make(map[int]models.Customer),
-		backend:   fileName,
-	}
-	LoadFromFile(fileName, &store.customers, &store.mu)
-
-	for id := range store.customers {
-		if id > store.nextID {
-			store.nextID = id
-		}
-	}
-	return store
+// NewCustomerRepository returns a new instance
+func NewCustomerRepository(db *bun.DB) *CustomerRepository {
+	return &CustomerRepository{db: db}
 }
 
-func (s *InMemoryCustomerStore) CreateCustomer(c models.Customer) (models.Customer, error) {
-	s.mu.Lock()
-	s.nextID++
-	c.ID = s.nextID
-	c.CreatedAt = time.Now().UTC()
-	s.customers[c.ID] = c
-	s.mu.Unlock()
-	err := s.Save()
+// CreateCustomer inserts a new customer
+func (r *CustomerRepository) CreateCustomer(customer models.Customer) (models.Customer, error) {
+	_, err := r.db.NewInsert().Model(&customer).Exec(context.Background())
 	if err != nil {
-		return models.Customer{}, fmt.Errorf("error saving customers: %v", err)
+		return models.Customer{}, fmt.Errorf("error inserting customer: %w", err)
 	}
-	return c, nil
+	return customer, nil
 }
 
-func (s *InMemoryCustomerStore) GetCustomer(id int) (models.Customer, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.customers[id]
-	if !ok {
-		return models.Customer{}, errors.New("customer not found")
-	}
-	return c, nil
-}
-
-func (s *InMemoryCustomerStore) UpdateCustomer(id int, c models.Customer) (models.Customer, error) {
-	s.mu.Lock()
-	_, ok := s.customers[id]
-	if !ok {
-		return models.Customer{}, errors.New("customer not found")
-	}
-	c.ID = id
-	s.customers[id] = c
-	s.mu.Unlock()
-	err := s.Save()
+// GetCustomer fetches a customer by ID
+func (r *CustomerRepository) GetCustomer(id int) (models.Customer, error) {
+	var customer models.Customer
+	err := r.db.NewSelect().Model(&customer).Where("id = ?", id).Scan(context.Background())
 	if err != nil {
-		return models.Customer{}, fmt.Errorf("error saving customers: %v", err)
+		return models.Customer{}, fmt.Errorf("customer not found: %w", err)
 	}
-	return c, nil
+	return customer, nil
 }
 
-func (s *InMemoryCustomerStore) DeleteCustomer(id int) error {
-	s.mu.Lock()
-	if _, ok := s.customers[id]; !ok {
-		return errors.New("customer not found")
-	}
-	delete(s.customers, id)
-	s.mu.Unlock()
-	err := s.Save()
+// UpdateCustomer modifies an existing customer
+func (r *CustomerRepository) UpdateCustomer(id int, customer models.Customer) (models.Customer, error) {
+	customer.ID = id
+	_, err := r.db.NewUpdate().Model(&customer).Where("id = ?", id).Exec(context.Background())
 	if err != nil {
-		return fmt.Errorf("error saving customers: %v", err)
+		return models.Customer{}, fmt.Errorf("error updating customer: %w", err)
+	}
+	return customer, nil
+}
+
+// DeleteCustomer removes a customer
+func (r *CustomerRepository) DeleteCustomer(id int) error {
+	_, err := r.db.NewDelete().Model((*models.Customer)(nil)).Where("id = ?", id).Exec(context.Background())
+	if err != nil {
+		return fmt.Errorf("error deleting customer: %w", err)
 	}
 	return nil
 }
 
-func (s *InMemoryCustomerStore) ListCustomers() ([]models.Customer, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var result []models.Customer
-	for _, c := range s.customers {
-		result = append(result, c)
+// ListCustomers fetches all customers
+func (r *CustomerRepository) ListCustomers() ([]models.Customer, error) {
+	var customers []models.Customer
+	err := r.db.NewSelect().Model(&customers).Scan(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving customers: %w", err)
 	}
-	return result, nil
-}
-
-func (s *InMemoryCustomerStore) Save() error {
-	if err := SaveToFile(s.backend, s.customers, &s.mu); err != nil {
-		return fmt.Errorf("error saving customers: %v", err)
-	}
-	return nil
+	return customers, nil
 }

@@ -5,89 +5,117 @@ import (
 	"FinalProject/repositories"
 	"context"
 	"fmt"
-	"log"
 )
 
+// AuthorService now interacts with DB repository
 type AuthorService struct {
-	authorStore repositories.AuthorStore
-	bookStore   repositories.BookStore
+	authorRepo *repositories.AuthorRepository
 }
 
-func NewAuthorService(authorStore repositories.AuthorStore, bookStore repositories.BookStore) *AuthorService {
-	return &AuthorService{authorStore: authorStore, bookStore: bookStore}
+func NewAuthorService(authorRepo *repositories.AuthorRepository) *AuthorService {
+	return &AuthorService{authorRepo: authorRepo}
 }
 
+// CreateAuthor inserts a new author
 func (s *AuthorService) CreateAuthor(ctx context.Context, author models.Author) (models.Author, error) {
 	select {
 	case <-ctx.Done():
 		return models.Author{}, ctx.Err()
 	default:
 	}
-	return s.authorStore.CreateAuthor(author)
+
+	// Start a transaction
+	tx, err := repositories.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Author{}, err
+	}
+	defer tx.Rollback()
+
+	createdAuthor, err := s.authorRepo.CreateAuthor(author)
+	if err != nil {
+		return models.Author{}, fmt.Errorf("error creating author: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return models.Author{}, err
+	}
+
+	return createdAuthor, nil
 }
 
+// GetAuthor retrieves an author by ID
 func (s *AuthorService) GetAuthor(ctx context.Context, id int) (models.Author, error) {
 	select {
 	case <-ctx.Done():
 		return models.Author{}, ctx.Err()
 	default:
 	}
-	return s.authorStore.GetAuthor(id)
+	return s.authorRepo.GetAuthor(id)
 }
 
+// UpdateAuthor modifies an existing author
 func (s *AuthorService) UpdateAuthor(ctx context.Context, id int, author models.Author) (models.Author, error) {
 	select {
 	case <-ctx.Done():
 		return models.Author{}, ctx.Err()
 	default:
 	}
-	return s.authorStore.UpdateAuthor(id, author)
+
+	// Start a transaction
+	tx, err := repositories.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Author{}, err
+	}
+	defer tx.Rollback()
+
+	updatedAuthor, err := s.authorRepo.UpdateAuthor(id, author)
+	if err != nil {
+		return models.Author{}, fmt.Errorf("error updating author: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return models.Author{}, err
+	}
+
+	return updatedAuthor, nil
 }
 
+// DeleteAuthor removes an author
 func (s *AuthorService) DeleteAuthor(ctx context.Context, id int) error {
 	select {
 	case <-ctx.Done():
-		log.Printf("Error: Context canceled while deleting author ID %d\n", id)
 		return ctx.Err()
 	default:
-		// Check the existence of the author 
-		_, err := s.authorStore.GetAuthor(id)
-		if err != nil {
-			log.Printf("Error: Author with ID %d not found: %v\n", id, err)
-			return fmt.Errorf("author not found: %v", err)
-		}
-
-		books, err := s.bookStore.ListBooks()
-		if err != nil {
-			log.Printf("Error: Failed to list books while deleting author ID %d: %v\n", id, err)
-			return fmt.Errorf("failed to list books: %v", err)
-		}
-		for _, book := range books {
-			if book.Author.ID == id {
-				log.Printf("Error: Cannot delete author ID %d because books are associated with this author\n", id)
-				return fmt.Errorf("cannot delete author with ID %d: books are associated with this author", id)
-			}
-		}
-
-		if err := s.authorStore.DeleteAuthor(id); err != nil {
-			log.Printf("Error: Failed to delete author ID %d: %v\n", id, err)
-			return fmt.Errorf("failed to delete author: %v", err)
-		}
-
-		log.Printf("Author with ID %d successfully deleted\n", id)
-		return nil
 	}
+
+	// Start a transaction
+	tx, err := repositories.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = s.authorRepo.DeleteAuthor(id)
+	if err != nil {
+		return fmt.Errorf("error deleting author: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
+// ListAuthors retrieves all authors
 func (s *AuthorService) ListAuthors(ctx context.Context) ([]models.Author, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
-	return s.authorStore.ListAuthors()
-}
-
-func (s *AuthorService) SaveChanges() error {
-	return s.authorStore.Save()
+	return s.authorRepo.ListAuthors()
 }
