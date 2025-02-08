@@ -67,7 +67,7 @@ func main() {
 		case http.MethodPost:
 			authorController.CreateAuthor(w, r)
 		case http.MethodGet:
-			authorController.ListAuthors(w, r)
+			authorController.SearchAuthors(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}

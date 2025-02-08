@@ -5,7 +5,7 @@ import (
 	"FinalProject/services"
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -88,12 +88,15 @@ func (ac *AuthorController) UpdateAuthor(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updated, updateErr := ac.service.UpdateAuthor(ctx, id, author)
+	author.ID = id
+
+	updatedAuthor, updateErr := ac.service.UpdateAuthor(ctx, id, author)
 	if updateErr != nil {
 		WriteJSONError(w, http.StatusNotFound, updateErr.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+
+	json.NewEncoder(w).Encode(updatedAuthor)
 }
 
 func (ac *AuthorController) DeleteAuthor(w http.ResponseWriter, r *http.Request) {
@@ -111,15 +114,17 @@ func (ac *AuthorController) DeleteAuthor(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	delErr := ac.service.DeleteAuthor(ctx, id)
-	if delErr != nil {
-		WriteJSONError(w, http.StatusNotFound, delErr.Error())
+	err = ac.service.DeleteAuthor(ctx, id)
+	if err != nil {
+		WriteJSONError(w, http.StatusConflict, "error deleting author because the author has associated books")
 		return
 	}
 
-	log.Printf("Author with ID %d successfully deleted\n", id)
-	w.WriteHeader(http.StatusNoContent)
-	w.Write([]byte("Author successfully deleted"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Author with ID %d successfully deleted", id),
+	})
 }
 
 func (ac *AuthorController) ListAuthors(w http.ResponseWriter, r *http.Request) {
@@ -131,5 +136,27 @@ func (ac *AuthorController) ListAuthors(w http.ResponseWriter, r *http.Request) 
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	json.NewEncoder(w).Encode(authors)
+}
+
+func (ac *AuthorController) SearchAuthors(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	firstName := r.URL.Query().Get("first_name")
+	lastName := r.URL.Query().Get("last_name")
+
+	criteria := models.AuthorCriteriaModel{
+		FirstName: firstName,
+		LastName:  lastName,
+	}
+
+	authors, err := ac.service.SearchAuthors(ctx, criteria)
+	if err != nil {
+		WriteJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(authors)
 }

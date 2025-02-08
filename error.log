@@ -76,3 +76,29 @@ ERROR: 2025/02/08 13:42:35 ErrorController.go:34: error retrieving order: ERROR:
 ERROR: 2025/02/08 13:44:38 ErrorController.go:34: order not found: ERROR: syntax error at or near "order" (SQLSTATE=42601)
 ERROR: 2025/02/08 13:46:47 ErrorController.go:34: order not found: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
 ERROR: 2025/02/08 13:49:53 ErrorController.go:34: order not found: sql: no rows in result set
+ERROR: 2025/02/08 13:54:57 ErrorController.go:34: book not found: sql: no rows in result set
+ERROR: 2025/02/08 14:03:03 ErrorController.go:34: author with ID 5 does not exist: author not found: sql: no rows in result set
+ERROR: 2025/02/08 14:05:57 ErrorController.go:34: author with ID 5 does not exist: author not found: sql: no rows in result set
+ERROR: 2025/02/08 14:17:47 ErrorController.go:34: error searching books: ERROR: invalid reference to FROM-clause entry for table "books" (SQLSTATE=42P01)
+ERROR: 2025/02/08 14:18:24 ErrorController.go:34: error searching books: ERROR: invalid reference to FROM-clause entry for table "books" (SQLSTATE=42P01)
+ERROR: 2025/02/08 14:18:27 ErrorController.go:34: error searching books: ERROR: invalid reference to FROM-clause entry for table "books" (SQLSTATE=42P01)
+ERROR: 2025/02/08 14:19:04 ErrorController.go:34: error searching books: ERROR: invalid reference to FROM-clause entry for table "books" (SQLSTATE=42P01)
+ERROR: 2025/02/08 14:37:08 ErrorController.go:34: invalid author ID
+ERROR: 2025/02/08 16:21:49 ErrorController.go:34: json: cannot unmarshal array into Go value of type models.Author
+ERROR: 2025/02/08 16:35:15 ErrorController.go:34: author not found: sql: no rows in result set
+ERROR: 2025/02/08 16:42:29 ErrorController.go:34: error updating author: author with ID 5 not found
+ERROR: 2025/02/08 16:43:14 ErrorController.go:34: author not found: sql: no rows in result set
+ERROR: 2025/02/08 16:45:52 ErrorController.go:34: error updating book: ERROR: insert or update on table "books" violates foreign key constraint "books_author_id_fkey" (SQLSTATE=23503)
+ERROR: 2025/02/08 16:55:08 ErrorController.go:34: error updating book: error updating book: ERROR: insert or update on table "books" violates foreign key constraint "books_author_id_fkey" (SQLSTATE=23503)
+ERROR: 2025/02/08 17:02:02 ErrorController.go:34: author with ID 999 does not exist
+ERROR: 2025/02/08 17:07:45 ErrorController.go:34: error updating book: error retrieving updated book: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/08 17:08:45 ErrorController.go:34: error updating book: error retrieving updated book: ERROR: missing FROM-clause entry for table "updatedbook" (SQLSTATE=42P01)
+ERROR: 2025/02/08 17:08:55 ErrorController.go:34: error updating book: error retrieving updated book: ERROR: missing FROM-clause entry for table "updatedbook" (SQLSTATE=42P01)
+ERROR: 2025/02/08 17:11:50 ErrorController.go:34: author with ID 19 does not exist
+ERROR: 2025/02/08 17:31:40 ErrorController.go:34: book with ID 5 not found
+ERROR: 2025/02/08 17:34:52 ErrorController.go:34: book not found: sql: no rows in result set
+ERROR: 2025/02/08 17:35:25 ErrorController.go:34: error deleting author: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/08 17:39:50 ErrorController.go:34: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/08 17:40:15 ErrorController.go:34: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/08 17:40:23 ErrorController.go:34: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
+ERROR: 2025/02/08 17:42:38 ErrorController.go:34: error deleting author: %w

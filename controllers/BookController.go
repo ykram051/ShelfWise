@@ -5,6 +5,7 @@ import (
 	"FinalProject/services"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -26,21 +27,21 @@ func (bc *BookController) CreateBook(w http.ResponseWriter, r *http.Request) {
 
 	var book models.Book
 	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
-		log.Println("❌ JSON Decode Error:", err) // LOG ERROR
+		log.Println("JSON Decode Error:", err) // LOG ERROR
 		WriteJSONError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 
-	log.Println("🟢 JSON Parsed Successfully:", book) // CHECK JSON PARSING
+	log.Println("JSON Parsed Successfully:", book)
 
 	created, err := bc.service.CreateBook(ctx, book)
 	if err != nil {
-		log.Println("❌ Service Error:", err) // LOG ERROR
+		log.Println("Service Error:", err)
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	log.Println("✅ Book created successfully:", created) // LOG SUCCESS
+	log.Println("Book created successfully:", created)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(created)
 }
@@ -105,17 +106,24 @@ func (bc *BookController) DeleteBook(w http.ResponseWriter, r *http.Request) {
 		WriteJSONError(w, http.StatusBadRequest, "missing book ID")
 		return
 	}
+
 	id, err := strconv.Atoi(parts[2])
 	if err != nil {
 		WriteJSONError(w, http.StatusBadRequest, "invalid book ID")
 		return
 	}
 
-	if delErr := bc.service.DeleteBook(ctx, id); delErr != nil {
-		WriteJSONError(w, http.StatusNotFound, delErr.Error())
+	err = bc.service.DeleteBook(ctx, id)
+	if err != nil {
+		WriteJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Book with ID %d successfully deleted", id),
+	})
 }
 
 func (bc *BookController) SearchBooks(w http.ResponseWriter, r *http.Request) {

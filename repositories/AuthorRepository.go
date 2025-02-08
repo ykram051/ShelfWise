@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/uptrace/bun"
 )
@@ -16,7 +17,7 @@ type AuthorRepository struct {
 // NewAuthorRepository creates an instance
 func NewAuthorRepository(db *bun.DB) *AuthorRepository {
 	if db == nil {
-		log.Fatal("❌ ERROR: Database connection is nil in AuthorRepository")
+		log.Fatal("ERROR: Database connection is nil in AuthorRepository")
 	}
 	return &AuthorRepository{db: db}
 }
@@ -30,13 +31,13 @@ type AuthorStore interface {
 }
 
 func (r *AuthorRepository) CreateAuthor(author models.Author) (models.Author, error) {
-	
+
 	_, err := r.db.NewInsert().Model(&author).Returning("*").Exec(context.Background())
 	if err != nil {
-		log.Println("❌ Failed to insert author:", err)
+		log.Println("Failed to insert author:", err)
 		return models.Author{}, fmt.Errorf("failed to insert author: %w", err)
 	}
-	log.Println("✅ Author successfully created:", author)
+	log.Println("Author successfully created:", author)
 	return author, nil
 }
 
@@ -46,7 +47,7 @@ func (r *AuthorRepository) GetAuthor(id int) (models.Author, error) {
 	err := r.db.NewSelect().
 		Model(&author).
 		Where("id = ?", id).
-		For("UPDATE"). // Prevents concurrent updates on the same row
+		For("UPDATE"). // Row-Level Locking
 		Scan(context.Background())
 	if err != nil {
 		return models.Author{}, fmt.Errorf("author not found: %w", err)
@@ -55,33 +56,46 @@ func (r *AuthorRepository) GetAuthor(id int) (models.Author, error) {
 }
 
 func (r *AuthorRepository) UpdateAuthor(id int, author models.Author) (models.Author, error) {
-	_, err := r.db.NewUpdate().
+	author.ID = id
+
+	result, err := r.db.NewUpdate().
 		Model(&author).
 		Where("id = ?", id).
+		Returning("*").
 		Exec(context.Background())
+
 	if err != nil {
 		return models.Author{}, fmt.Errorf("error updating author: %w", err)
 	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return models.Author{}, fmt.Errorf("author with ID %d not found", id)
+	}
+
 	return author, nil
 }
+
 func (r *AuthorRepository) DeleteAuthor(id int) error {
-	// Check if the author exists
 	var author models.Author
 	err := r.db.NewSelect().Model(&author).Where("id = ?", id).Scan(context.Background())
 	if err != nil {
 		log.Println("Author not found:", err)
-		return fmt.Errorf("author not found: %w", err)
+		return fmt.Errorf("author with ID %d not found", id)
 	}
 
-	// Delete the author
 	_, err = r.db.NewDelete().
 		Model((*models.Author)(nil)).
 		Where("id = ?", id).
 		Exec(context.Background())
 	if err != nil {
+		if strings.Contains(err.Error(), "SQLSTATE 23503") {
+			return fmt.Errorf("cannot delete author with ID %d because they have associated books", id) 
+		}
 		return fmt.Errorf("error deleting author: %w", err)
 	}
-	log.Println("✅ Author successfully deleted:", id)
+
+	log.Println("Author successfully deleted:", id)
 	return nil
 }
 
@@ -90,6 +104,25 @@ func (r *AuthorRepository) ListAuthors() ([]models.Author, error) {
 	err := r.db.NewSelect().Model(&authors).Scan(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving authors: %w", err)
+	}
+	return authors, nil
+}
+
+func (r *AuthorRepository) SearchAuthors(criteria models.AuthorCriteriaModel) ([]models.Author, error) {
+	var authors []models.Author
+	query := r.db.NewSelect().Model(&authors)
+
+	if criteria.FirstName != "" {
+		query = query.Where("LOWER(first_name) LIKE ?", "%"+strings.ToLower(criteria.FirstName)+"%")
+	}
+
+	if criteria.LastName != "" {
+		query = query.Where("LOWER(last_name) LIKE ?", "%"+strings.ToLower(criteria.LastName)+"%")
+	}
+
+	err := query.Scan(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error searching authors: %w", err)
 	}
 	return authors, nil
 }

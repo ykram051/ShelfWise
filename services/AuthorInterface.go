@@ -24,7 +24,6 @@ func (s *AuthorService) CreateAuthor(ctx context.Context, author models.Author) 
 	default:
 	}
 
-	// Start a transaction
 	tx, err := repositories.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return models.Author{}, err
@@ -36,7 +35,6 @@ func (s *AuthorService) CreateAuthor(ctx context.Context, author models.Author) 
 		return models.Author{}, fmt.Errorf("error creating author: %w", err)
 	}
 
-	// Commit transaction
 	if err := tx.Commit(); err != nil {
 		return models.Author{}, err
 	}
@@ -62,7 +60,6 @@ func (s *AuthorService) UpdateAuthor(ctx context.Context, id int, author models.
 	default:
 	}
 
-	// Start a transaction
 	tx, err := repositories.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return models.Author{}, err
@@ -74,7 +71,6 @@ func (s *AuthorService) UpdateAuthor(ctx context.Context, id int, author models.
 		return models.Author{}, fmt.Errorf("error updating author: %w", err)
 	}
 
-	// Commit transaction
 	if err := tx.Commit(); err != nil {
 		return models.Author{}, err
 	}
@@ -90,7 +86,6 @@ func (s *AuthorService) DeleteAuthor(ctx context.Context, id int) error {
 	default:
 	}
 
-	// Start a transaction
 	tx, err := repositories.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -99,10 +94,9 @@ func (s *AuthorService) DeleteAuthor(ctx context.Context, id int) error {
 
 	err = s.authorRepo.DeleteAuthor(id)
 	if err != nil {
-		return fmt.Errorf("error deleting author: %w", err)
+		return err 
 	}
 
-	// Commit transaction
 	if err := tx.Commit(); err != nil {
 		return err
 	}
@@ -118,4 +112,13 @@ func (s *AuthorService) ListAuthors(ctx context.Context) ([]models.Author, error
 	default:
 	}
 	return s.authorRepo.ListAuthors()
+}
+
+func (s *AuthorService) SearchAuthors(ctx context.Context, criteria models.AuthorCriteriaModel) ([]models.Author, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	return s.authorRepo.SearchAuthors(criteria)
 }

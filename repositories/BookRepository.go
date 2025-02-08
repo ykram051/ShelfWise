@@ -51,19 +51,55 @@ func (r *BookRepository) GetBook(id int) (models.Book, error) {
 // UpdateBook modifies an existing book
 func (r *BookRepository) UpdateBook(id int, book models.Book) (models.Book, error) {
 	book.ID = id
-	_, err := r.db.NewUpdate().Model(&book).Where("id = ?", id).Exec(context.Background())
+
+	result, err := r.db.NewUpdate().
+		Model(&book).
+		Where("id = ?", id).
+		Returning("*").
+		Exec(context.Background())
+
 	if err != nil {
 		return models.Book{}, fmt.Errorf("error updating book: %w", err)
 	}
-	return book, nil
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return models.Book{}, fmt.Errorf("book with ID %d not found", id)
+	}
+	var updatedBook models.Book
+	err = r.db.NewSelect().
+		Model(&updatedBook).
+		Where("?TableAlias.id = ?", id).
+		Relation("Author").
+		Scan(context.Background())
+
+	if err != nil {
+		return models.Book{}, fmt.Errorf("error retrieving updated book: %w", err)
+	}
+	return updatedBook, nil
 }
 
 // DeleteBook removes a book
 func (r *BookRepository) DeleteBook(id int) error {
-	_, err := r.db.NewDelete().Model((*models.Book)(nil)).Where("id = ?", id).Exec(context.Background())
+	var book models.Book
+	err := r.db.NewSelect().Model(&book).Where("id = ?", id).Scan(context.Background())
+
+	if err != nil {
+		return fmt.Errorf("book with ID %d not found", id) 
+	}
+	result, err := r.db.NewDelete().
+		Model((*models.Book)(nil)).
+		Where("id = ?", id).
+		Exec(context.Background())
+
 	if err != nil {
 		return fmt.Errorf("error deleting book: %w", err)
 	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("book with ID %d not found", id)
+	}
+
 	return nil
 }
 
@@ -73,16 +109,17 @@ func (r *BookRepository) SearchBooks(criteria models.SearchCriteria) ([]models.B
 	query := r.db.NewSelect().Model(&books).Relation("Author")
 
 	if criteria.Title != "" {
-		query = query.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(criteria.Title)+"%")
+		query = query.Where("?TableAlias.title ILIKE ?", "%"+criteria.Title+"%")
 	}
+
 	if criteria.Author != "" {
-		query = query.Join("JOIN authors ON authors.id = books.author_id").
+		query = query.
+			Join("JOIN authors ON authors.id = ?TableAlias.author_id").
 			Where("LOWER(authors.first_name || ' ' || authors.last_name) LIKE ?", "%"+strings.ToLower(criteria.Author)+"%")
 	}
 	if criteria.Genre != "" {
-		query = query.Where("? = ANY(genres)", criteria.Genre)
+		query = query.Where("? = ANY(?TableAlias.genres)", criteria.Genre)
 	}
-
 	err := query.Scan(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("error searching books: %w", err)
