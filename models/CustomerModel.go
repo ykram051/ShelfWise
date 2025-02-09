@@ -11,6 +11,6 @@ type Customer struct {
 	ID            int       `bun:",pk,autoincrement"`
 	Name          string    `bun:",notnull"`
 	Email         string    `bun:",unique,notnull"`
-	Address       Address   `bun:",embed"` // Embedded Address
+	Address       Address   `bun:",embed"` 
 	CreatedAt     time.Time `bun:",nullzero,notnull,default:current_timestamp"`
 }

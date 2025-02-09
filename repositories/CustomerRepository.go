@@ -22,7 +22,6 @@ type CustomerRepository struct {
 	db *bun.DB
 }
 
-// NewCustomerRepository returns a new instance
 func NewCustomerRepository(db *bun.DB) *CustomerRepository {
 	return &CustomerRepository{db: db}
 }
@@ -41,27 +40,58 @@ func (r *CustomerRepository) GetCustomer(id int) (models.Customer, error) {
 	var customer models.Customer
 	err := r.db.NewSelect().Model(&customer).Where("id = ?", id).Scan(context.Background())
 	if err != nil {
-		return models.Customer{}, fmt.Errorf("customer not found: %w", err)
+		return models.Customer{}, fmt.Errorf("customer not found with ID %d", id)
 	}
 	return customer, nil
 }
 
 // UpdateCustomer modifies an existing customer
 func (r *CustomerRepository) UpdateCustomer(id int, customer models.Customer) (models.Customer, error) {
+	// Retrieve the existing customer to preserve `CreatedAt`
+	var existingCustomer models.Customer
+	err := r.db.NewSelect().Model(&existingCustomer).Where("id = ?", id).Scan(context.Background())
+	if err != nil {
+		return models.Customer{}, fmt.Errorf("customer with ID %d not found", id)
+	}
+
 	customer.ID = id
-	_, err := r.db.NewUpdate().Model(&customer).Where("id = ?", id).Exec(context.Background())
+	customer.CreatedAt = existingCustomer.CreatedAt
+
+	_, err = r.db.NewUpdate().
+		Model(&customer).
+		Column("name", "email",
+			"street", "city", "state", "postal_code", "country").
+		Where("id = ?", id).
+		Exec(context.Background())
+
 	if err != nil {
 		return models.Customer{}, fmt.Errorf("error updating customer: %w", err)
 	}
+
 	return customer, nil
 }
 
 // DeleteCustomer removes a customer
 func (r *CustomerRepository) DeleteCustomer(id int) error {
-	_, err := r.db.NewDelete().Model((*models.Customer)(nil)).Where("id = ?", id).Exec(context.Background())
+	var customer models.Customer
+	err := r.db.NewSelect().Model(&customer).Where("id = ?", id).Scan(context.Background())
+	if err != nil {
+		return fmt.Errorf("customer with ID %d not found", id)
+	}
+
+	result, err := r.db.NewDelete().
+		Model((*models.Customer)(nil)).
+		Where("id = ?", id).
+		Exec(context.Background())
+
 	if err != nil {
 		return fmt.Errorf("error deleting customer: %w", err)
 	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("customer with ID %d not found", id)
+	}
+
 	return nil
 }
 

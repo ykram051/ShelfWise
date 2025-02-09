@@ -5,6 +5,7 @@ import (
 	"FinalProject/services"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -109,12 +110,16 @@ func (cc *CustomerController) DeleteCustomer(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	delErr := cc.service.DeleteCustomer(ctx, id)
-	if delErr != nil {
-		WriteJSONError(w, http.StatusNotFound, delErr.Error())
+	err = cc.service.DeleteCustomer(ctx, id)
+	if err != nil {
+		WriteJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Customer with ID %d successfully deleted", id),
+	})
 }
 
 func (cc *CustomerController) ListCustomers(w http.ResponseWriter, r *http.Request) {
