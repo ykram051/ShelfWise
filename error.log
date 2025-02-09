@@ -102,3 +102,11 @@ ERROR: 2025/02/08 17:39:50 ErrorController.go:34: error deleting author: ERROR: 
 ERROR: 2025/02/08 17:40:15 ErrorController.go:34: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
 ERROR: 2025/02/08 17:40:23 ErrorController.go:34: error deleting author: ERROR: update or delete on table "authors" violates foreign key constraint "books_author_id_fkey" on table "books" (SQLSTATE=23503)
 ERROR: 2025/02/08 17:42:38 ErrorController.go:34: error deleting author: %w
+ERROR: 2025/02/08 19:01:37 ErrorController.go:34: error updating author: author with ID 4 not found
+ERROR: 2025/02/08 19:07:16 ErrorController.go:34: error updating customer: bun: model=Customer does not have column=address
+ERROR: 2025/02/08 19:10:23 ErrorController.go:34: error inserting customer: ERROR: duplicate key value violates unique constraint "customers_email_key" (SQLSTATE=23505)
+ERROR: 2025/02/08 19:18:09 ErrorController.go:34: customer with ID 5 not found
+ERROR: 2025/02/08 19:18:15 ErrorController.go:34: customer with ID 9 not found
+ERROR: 2025/02/09 09:26:37 ErrorController.go:34: customer not found: sql: no rows in result set
+ERROR: 2025/02/09 09:31:57 ErrorController.go:34: customer not found with ID 9
+ERROR: 2025/02/09 09:32:08 ErrorController.go:34: customer not found with ID 1
