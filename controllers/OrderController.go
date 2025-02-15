@@ -141,11 +141,9 @@ func (oc *OrderController) GetOrdersByDateRange(w http.ResponseWriter, r *http.R
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// ✅ Parse "from" and "to" query parameters
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
 
-	// ✅ Validate input dates
 	if fromStr == "" || toStr == "" {
 		WriteJSONError(w, http.StatusBadRequest, "Missing 'from' or 'to' query parameters")
 		return
@@ -163,14 +161,12 @@ func (oc *OrderController) GetOrdersByDateRange(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// ✅ Fetch orders within the given date range
 	orders, err := oc.service.GetOrdersInRange(ctx, from, to)
 	if err != nil {
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// ✅ Return the filtered orders
 	json.NewEncoder(w).Encode(orders)
 }
 
@@ -178,7 +174,6 @@ func (oc *OrderController) SearchOrdersByCustomerID(w http.ResponseWriter, r *ht
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// ✅ Parse `customer_id` from query parameters
 	customerIDStr := r.URL.Query().Get("customer_id")
 	if customerIDStr == "" {
 		WriteJSONError(w, http.StatusBadRequest, "Missing 'customer_id' query parameter")
@@ -191,10 +186,9 @@ func (oc *OrderController) SearchOrdersByCustomerID(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// ✅ Fetch orders for the given Customer ID
 	orders, err := oc.service.SearchOrdersByCustomerID(ctx, customerID)
 	if err != nil {
-		if strings.Contains(err.Error(), "customer with ID") { // ✅ Detect customer not found error
+		if strings.Contains(err.Error(), "customer with ID") {
 			WriteJSONError(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -202,6 +196,5 @@ func (oc *OrderController) SearchOrdersByCustomerID(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// ✅ Return the filtered orders
 	json.NewEncoder(w).Encode(orders)
 }
