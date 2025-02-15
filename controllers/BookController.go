@@ -27,12 +27,9 @@ func (bc *BookController) CreateBook(w http.ResponseWriter, r *http.Request) {
 
 	var book models.Book
 	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
-		log.Println("JSON Decode Error:", err) // LOG ERROR
 		WriteJSONError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
-
-	log.Println("JSON Parsed Successfully:", book)
 
 	created, err := bc.service.CreateBook(ctx, book)
 	if err != nil {
