@@ -132,7 +132,21 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
+	http.HandleFunc("/orders/date-range", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			orderController.GetOrdersByDateRange(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	http.HandleFunc("/orders/search-by-customer", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			orderController.SearchOrdersByCustomerID(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	
 	// Reports Route
 	http.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

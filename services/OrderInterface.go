@@ -5,7 +5,6 @@ import (
 	"FinalProject/repositories"
 	"context"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -29,46 +28,40 @@ func (s *OrderService) CreateOrder(ctx context.Context, order models.Order) (mod
 
 	customer, err := s.customerstore.GetCustomer(order.CustomerID)
 	if err != nil {
-		return models.Order{}, fmt.Errorf("customer with ID %d not found: %w", order.CustomerID, err)
+		return models.Order{}, fmt.Errorf("customer with ID %d not found .", order.CustomerID)
 	}
-	order.Customer = &customer  // ✅ Store Customer
+	order.Customer = &customer
 
 	var total float64
 	for i, item := range order.Items {
 		book, err := s.bookstore.GetBook(item.BookID)
 		if err != nil {
-			return models.Order{}, fmt.Errorf("book with ID %d not found: %w", item.BookID, err)
+			return models.Order{}, fmt.Errorf("book with ID %d not found .", item.BookID)
 		}
 
 		if book.Stock < item.Quantity {
 			return models.Order{}, fmt.Errorf("insufficient stock for book ID %d", item.BookID)
 		}
 
-		// ✅ Deduct stock and update book
 		book.Stock -= item.Quantity
 		if _, err := s.bookstore.UpdateBook(book.ID, book); err != nil {
 			return models.Order{}, err
 		}
 
-		// ✅ Calculate total price
 		total += float64(item.Quantity) * book.Price
 
-		// ✅ Store the book inside the order items
 		order.Items[i].Book = &book
 	}
 
-	order.TotalPrice = total  // ✅ Ensure TotalPrice is saved
-	order.Status = "Created"  // ✅ Set Status
-
+	order.TotalPrice = total
+	order.Status = "Created"
 	createdOrder, err := s.store.CreateOrder(order)
 	if err != nil {
 		return models.Order{}, err
 	}
 
-	log.Println("✅ Order successfully created:", createdOrder)
 	return createdOrder, nil
 }
-
 
 // GetOrder retrieves an order
 func (s *OrderService) GetOrder(ctx context.Context, id int) (models.Order, error) {
@@ -190,4 +183,13 @@ func (s *OrderService) GetOrdersInRange(ctx context.Context, from, to time.Time)
 	default:
 	}
 	return s.store.GetOrdersByDateRange(from, to)
+}
+
+func (s *OrderService) SearchOrdersByCustomerID(ctx context.Context, customerID int) ([]models.Order, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	return s.store.SearchOrdersByCustomerID(customerID)
 }

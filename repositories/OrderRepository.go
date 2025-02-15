@@ -4,7 +4,6 @@ import (
 	"FinalProject/models"
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -18,6 +17,7 @@ type OrderStore interface {
 	DeleteOrder(id int) error
 	ListOrders() ([]models.Order, error)
 	GetOrdersByDateRange(from, to time.Time) ([]models.Order, error)
+	SearchOrdersByCustomerID(customerID int) ([]models.Order, error)
 }
 
 // PostgreSQL-backed implementation of OrderStore
@@ -41,19 +41,16 @@ func (r *OrderRepository) CreateOrder(order models.Order) (models.Order, error) 
 		return models.Order{}, fmt.Errorf("error inserting order: %w", err)
 	}
 
-	log.Println("✅ Order inserted with ID:", order.ID)
-
 	// Insert Order Items
 	for i := range order.Items {
-		order.Items[i].OrderID = order.ID // ✅ Assign correct OrderID
+		order.Items[i].OrderID = order.ID
 		_, err := r.db.NewInsert().
 			Model(&order.Items[i]).
-			Returning("*"). // ✅ Return the inserted row with ID
+			Returning("*").
 			Exec(context.Background())
 		if err != nil {
 			return models.Order{}, fmt.Errorf("error inserting order item: %w", err)
 		}
-		log.Println("✅ Inserted order item:", order.Items[i])
 	}
 
 	return order, nil
@@ -64,7 +61,7 @@ func (r *OrderRepository) GetOrder(id int) (models.Order, error) {
 	var order models.Order
 	err := r.db.NewSelect().
 		Model(&order).
-		Where("?TableAlias.id = ?", id). // ✅ Uses Bun's table alias instead of hardcoding "orders"
+		Where("?TableAlias.id = ?", id).
 		Relation("Customer").
 		Relation("Items.Book").
 		Relation("Items.Book.Author").
@@ -79,10 +76,14 @@ func (r *OrderRepository) GetOrder(id int) (models.Order, error) {
 // GetOrdersByDateRange fetches orders in a time range
 func (r *OrderRepository) GetOrdersByDateRange(from, to time.Time) ([]models.Order, error) {
 	var orders []models.Order
+
 	err := r.db.NewSelect().
 		Model(&orders).
-		Where("created_at BETWEEN ? AND ?", from, to).
+		Where("?TableAlias.created_at BETWEEN ? AND ?", from, to).
+		Relation("Customer").
+		Relation("Items.Book.Author").
 		Scan(context.Background())
+
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving orders: %w", err)
 	}
@@ -94,9 +95,9 @@ func (r *OrderRepository) ListOrders() ([]models.Order, error) {
 	var orders []models.Order
 	err := r.db.NewSelect().
 		Model(&orders).
-		Relation("Customer").          // ✅ Fetch customer info
-		Relation("Items.Book").        // ✅ Fetch books in the order items
-		Relation("Items.Book.Author"). // ✅ Fetch book authors
+		Relation("Customer").
+		Relation("Items.Book").
+		Relation("Items.Book.Author").
 		Scan(context.Background())
 
 	if err != nil {
@@ -108,21 +109,132 @@ func (r *OrderRepository) ListOrders() ([]models.Order, error) {
 
 // UpdateOrder modifies an existing order
 func (r *OrderRepository) UpdateOrder(id int, order models.Order) (models.Order, error) {
-	_, err := r.db.NewUpdate().
+	var existingOrder models.Order
+	err := r.db.NewSelect().
+		Model(&existingOrder).
+		Where("?TableAlias.id = ?", id).
+		Relation("Items").
+		Scan(context.Background())
+
+	if err != nil {
+		return models.Order{}, fmt.Errorf("order with ID %d not found", id)
+	}
+	// to keep the original created_at and status
+	order.ID = id
+	order.CreatedAt = existingOrder.CreatedAt
+	order.Status = existingOrder.Status
+
+	_, err = r.db.NewDelete().
+		Model((*models.OrderItem)(nil)).
+		Where("order_id = ?", id).
+		Exec(context.Background())
+
+	if err != nil {
+		return models.Order{}, fmt.Errorf("error clearing previous order items: %w", err)
+	}
+
+	totalPrice := 0.0
+	for i := range order.Items {
+		var book models.Book
+		err := r.db.NewSelect().
+			Model(&book).
+			Where("?TableAlias.id = ?", order.Items[i].BookID).
+			Scan(context.Background())
+
+		if err != nil {
+			return models.Order{}, fmt.Errorf("book with ID %d not found", order.Items[i].BookID)
+		}
+
+		order.Items[i].Book = &book
+		order.Items[i].Book.PublishedAt = book.PublishedAt
+
+		order.Items[i].OrderID = id
+		_, err = r.db.NewInsert().Model(&order.Items[i]).Exec(context.Background())
+		if err != nil {
+			return models.Order{}, fmt.Errorf("error inserting order item: %w", err)
+		}
+
+		totalPrice += book.Price * float64(order.Items[i].Quantity)
+	}
+	order.TotalPrice = totalPrice
+
+	_, err = r.db.NewUpdate().
 		Model(&order).
-		Where("id = ?", id).
+		Where("?TableAlias.id = ?", id).
+		Returning("*").
 		Exec(context.Background())
 
 	if err != nil {
 		return models.Order{}, fmt.Errorf("error updating order: %w", err)
 	}
-	return order, nil
+
+	var updatedOrder models.Order
+	err = r.db.NewSelect().
+		Model(&updatedOrder).
+		Where("?TableAlias.id = ?", id).
+		Relation("Customer").
+		Relation("Items.Book.Author").
+		Scan(context.Background())
+
+	if err != nil {
+		return models.Order{}, fmt.Errorf("error retrieving updated order: %w", err)
+	}
+
+	return updatedOrder, nil
 }
 
 func (r *OrderRepository) DeleteOrder(id int) error {
-	_, err := r.db.NewDelete().Model((*models.Order)(nil)).Where("id = ?", id).Exec(context.Background())
+	var order models.Order
+	err := r.db.NewSelect().
+		Model(&order).
+		Where("id = ?", id).
+		Scan(context.Background())
+
+	if err != nil {
+		return fmt.Errorf("order with ID %d not found", id)
+	}
+	result, err := r.db.NewDelete().
+		Model((*models.Order)(nil)).
+		Where("id = ?", id).
+		Exec(context.Background())
+
 	if err != nil {
 		return fmt.Errorf("error deleting order: %w", err)
 	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("order with ID %d not found", id)
+	}
+
 	return nil
+}
+
+func (r *OrderRepository) SearchOrdersByCustomerID(customerID int) ([]models.Order, error) {
+	var orders []models.Order
+
+	// ✅ Step 1: Check if customer exists
+	var customer models.Customer
+	err := r.db.NewSelect().
+		Model(&customer).
+		Where("id = ?", customerID).
+		Scan(context.Background())
+
+	if err != nil {
+		return nil, fmt.Errorf("customer with ID %d not found", customerID)
+	}
+
+	// ✅ Step 2: Retrieve orders for the customer
+	err = r.db.NewSelect().
+		Model(&orders).
+		Where("?TableAlias.customer_id = ?", customerID).
+		Relation("Customer").
+		Relation("Items.Book.Author").
+		Scan(context.Background())
+
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving orders for customer ID %d: %w", customerID, err)
+	}
+
+	return orders, nil
 }
