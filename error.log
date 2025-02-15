@@ -110,3 +110,31 @@ ERROR: 2025/02/08 19:18:15 ErrorController.go:34: customer with ID 9 not found
 ERROR: 2025/02/09 09:26:37 ErrorController.go:34: customer not found: sql: no rows in result set
 ERROR: 2025/02/09 09:31:57 ErrorController.go:34: customer not found with ID 9
 ERROR: 2025/02/09 09:32:08 ErrorController.go:34: customer not found with ID 1
+ERROR: 2025/02/14 09:28:11 ErrorController.go:34: customer with ID 1 not found: customer not found with ID 1
+ERROR: 2025/02/14 09:30:52 ErrorController.go:34: insufficient stock for book ID 4
+ERROR: 2025/02/14 09:31:15 ErrorController.go:34: insufficient stock for book ID 4
+ERROR: 2025/02/14 09:32:48 ErrorController.go:34: book with ID 6 not found: book not found: sql: no rows in result set
+ERROR: 2025/02/14 09:35:36 ErrorController.go:34: book with ID 6 not found: book not found: sql: no rows in result set
+ERROR: 2025/02/14 11:50:29 ErrorController.go:34: error retrieving updated order: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/14 11:56:12 ErrorController.go:34: error retrieving updated order: ERROR: column reference "id" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/14 13:41:15 ErrorController.go:34: book with ID 9 not found
+ERROR: 2025/02/14 15:42:17 ErrorController.go:34: order with ID 9 not found
+ERROR: 2025/02/15 13:35:21 ErrorController.go:34: order with ID 9 not found
+ERROR: 2025/02/15 13:35:44 ErrorController.go:34: customer with ID 9 not found .
+ERROR: 2025/02/15 13:36:09 ErrorController.go:34: book with ID 10 not found .
+ERROR: 2025/02/15 13:36:18 ErrorController.go:34: insufficient stock for book ID 1
+ERROR: 2025/02/15 13:37:10 ErrorController.go:34: error updating order: ERROR: insert or update on table "orders" violates foreign key constraint "orders_customer_id_fkey" (SQLSTATE=23503)
+ERROR: 2025/02/15 13:39:52 ErrorController.go:34: book not found: sql: no rows in result set
+ERROR: 2025/02/15 13:55:45 ErrorController.go:34: author first name and last name cannot be empty
+ERROR: 2025/02/15 14:00:46 ErrorController.go:34: error retrieving orders: ERROR: column reference "created_at" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/15 14:15:16 ErrorController.go:34: customer with ID 9 not found
+ERROR: 2025/02/15 14:15:24 ErrorController.go:34: customer with ID 2 not found
+ERROR: 2025/02/15 14:15:27 ErrorController.go:34: customer with ID 1 not found
+ERROR: 2025/02/15 14:16:09 ErrorController.go:34: error inserting customer: ERROR: duplicate key value violates unique constraint "customers_email_key" (SQLSTATE=23505)
+ERROR: 2025/02/15 15:20:30 ErrorController.go:34: author first name and last name cannot be empty
+ERROR: 2025/02/15 16:45:41 ErrorController.go:34: book with ID 3 not found .
+ERROR: 2025/02/15 17:20:44 ErrorController.go:34: error retrieving orders: ERROR: column reference "created_at" is ambiguous (SQLSTATE=42702)
+ERROR: 2025/02/15 17:23:40 ErrorController.go:34: invalid order ID
+ERROR: 2025/02/15 17:24:19 ErrorController.go:34: invalid order ID
+ERROR: 2025/02/15 17:29:19 ErrorController.go:34: Invalid 'to' date format, expected RFC3339 (YYYY-MM-DDTHH:MM:SSZ)
+ERROR: 2025/02/15 17:29:23 ErrorController.go:34: error retrieving orders: ERROR: invalid reference to FROM-clause entry for table "orders" (SQLSTATE=42P01)
