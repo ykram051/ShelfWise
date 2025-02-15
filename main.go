@@ -4,7 +4,7 @@ import (
 	"FinalProject/controllers"
 	"FinalProject/repositories"
 	"FinalProject/services"
-	"FinalProject/views"
+	"FinalProject/task"
 	"log"
 	"net/http"
 )
@@ -19,13 +19,14 @@ func main() {
 	bookRepo := repositories.NewBookRepository(repositories.DB)
 	customerRepo := repositories.NewCustomerRepository(repositories.DB)
 	orderRepo := repositories.NewOrderRepository(repositories.DB)
+	reportRepo := repositories.NewReportStore(repositories.DB)
 
 	// Initialize services
 	authorService := services.NewAuthorService(authorRepo)
 	bookService := services.NewBookService(bookRepo, authorRepo)
 	customerService := services.NewCustomerService(customerRepo)
 	orderService := services.NewOrderService(orderRepo, bookRepo, customerRepo)
-	reportService := services.NewReportService(orderRepo)
+	reportService := services.NewReportService(orderRepo, reportRepo)
 
 	// Initialize controllers
 	authorController := controllers.NewAuthorController(authorService)
@@ -35,7 +36,7 @@ func main() {
 	reportController := controllers.NewReportController(reportService)
 
 	// Start Daily Report Job
-	views.StartDailyReportJob(reportService)
+	task.StartDailyReportJob(reportService)
 
 	// Books Routes
 	http.HandleFunc("/books", func(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +147,7 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	
+
 	// Reports Route
 	http.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

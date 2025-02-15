@@ -79,7 +79,7 @@ func (r *OrderRepository) GetOrdersByDateRange(from, to time.Time) ([]models.Ord
 
 	err := r.db.NewSelect().
 		Model(&orders).
-		Where("?TableAlias.created_at BETWEEN ? AND ?", from, to).
+		Where("?TableAlias.created_at BETWEEN ? AND ?", from, to, from.UTC(), to.UTC()).
 		Relation("Customer").
 		Relation("Items.Book.Author").
 		Scan(context.Background())
@@ -213,7 +213,6 @@ func (r *OrderRepository) DeleteOrder(id int) error {
 func (r *OrderRepository) SearchOrdersByCustomerID(customerID int) ([]models.Order, error) {
 	var orders []models.Order
 
-	// ✅ Step 1: Check if customer exists
 	var customer models.Customer
 	err := r.db.NewSelect().
 		Model(&customer).
@@ -224,7 +223,6 @@ func (r *OrderRepository) SearchOrdersByCustomerID(customerID int) ([]models.Ord
 		return nil, fmt.Errorf("customer with ID %d not found", customerID)
 	}
 
-	// ✅ Step 2: Retrieve orders for the customer
 	err = r.db.NewSelect().
 		Model(&orders).
 		Where("?TableAlias.customer_id = ?", customerID).

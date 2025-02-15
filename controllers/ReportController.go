@@ -19,6 +19,7 @@ type ReportController struct {
 func NewReportController(rs *services.ReportService) *ReportController {
 	return &ReportController{reportService: rs}
 }
+
 func (rc *ReportController) ListReports(w http.ResponseWriter, r *http.Request) {
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
@@ -26,7 +27,7 @@ func (rc *ReportController) ListReports(w http.ResponseWriter, r *http.Request) 
 	var from, to time.Time
 	var err error
 	if fromStr == "" {
-		from = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+		from = time.Date(2025, 1, 1, 15, 0, 0, 0, time.UTC) // Changed to 15:00
 	} else {
 		from, err = time.Parse("2006-01-02", fromStr)
 		if err != nil {
@@ -44,7 +45,7 @@ func (rc *ReportController) ListReports(w http.ResponseWriter, r *http.Request) 
 			WriteJSONError(w, http.StatusBadRequest, "invalid 'to' date format (use YYYY-MM-DD)")
 			return
 		}
-		to = to.UTC() 
+		to = to.UTC()
 	}
 
 	reportsDir, err := filepath.Abs(filepath.Join("..", "Final Project", "output-reports"))
@@ -78,7 +79,7 @@ func (rc *ReportController) ListReports(w http.ResponseWriter, r *http.Request) 
 
 		trimmed := strings.TrimPrefix(filename, "report_")
 		trimmed = strings.TrimSuffix(trimmed, ".json")
-		fileTimestamp, parseErr := time.Parse("01022006150405", trimmed)
+		fileTimestamp, parseErr := time.Parse("010220061504", trimmed) // Adjusted timestamp format
 		if parseErr != nil {
 			fmt.Println("Failed to parse timestamp for file:", filename, "Error:", parseErr)
 			continue

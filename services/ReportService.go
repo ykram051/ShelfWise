@@ -8,11 +8,12 @@ import (
 )
 
 type ReportService struct {
-	orderStore repositories.OrderStore
+	orderStore  repositories.OrderStore
+	reportStore repositories.ReportStore // ✅ Add a store for reports
 }
 
-func NewReportService(os repositories.OrderStore) *ReportService {
-	return &ReportService{orderStore: os}
+func NewReportService(os repositories.OrderStore, rs repositories.ReportStore) *ReportService {
+	return &ReportService{orderStore: os, reportStore: rs}
 }
 
 func (rs *ReportService) GenerateSalesReport(ctx context.Context, from, to time.Time) (models.SalesReport, error) {
@@ -39,19 +40,39 @@ func (rs *ReportService) GenerateSalesReport(ctx context.Context, from, to time.
 			bookMap[item.BookID] = item.Book // ✅ Store the pointer directly
 		}
 	}
-
-	var topSelling []models.BookSales
+	var allbooks []models.BookSales
 	for bookID, qty := range bookSalesMap {
-		topSelling = append(topSelling, models.BookSales{
+		
+		allbooks = append(allbooks, models.BookSales{
+			BookID:   bookID,
 			Book:     bookMap[bookID], // ✅ Now bookMap[bookID] is a pointer (*models.Book)
 			Quantity: qty,
 		})
 	}
 
-	return models.SalesReport{
+
+	var topSelling []models.BookSales
+	for bookID, qty := range bookSalesMap {
+		
+		topSelling = append(topSelling, models.BookSales{
+			BookID:   bookID,
+			Book:     bookMap[bookID], // ✅ Now bookMap[bookID] is a pointer (*models.Book)
+			Quantity: qty,
+		})
+	}
+
+	report := models.SalesReport{
 		Timestamp:       time.Now(),
 		TotalRevenue:    totalRevenue,
 		TotalOrders:     totalOrders,
 		TopSellingBooks: topSelling,
-	}, nil
+	}
+
+	// ✅ Insert the report into the database
+	err = rs.reportStore.SaveReport(ctx, &report)
+	if err != nil {
+		return models.SalesReport{}, err
+	}
+
+	return report, nil
 }
