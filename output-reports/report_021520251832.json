@@ -1,0 +1,52 @@
+{
+  "ID": 12,
+  "Timestamp": "2025-02-15T18:32:00.002668+01:00",
+  "TotalRevenue": 275.43,
+  "TotalOrders": 4,
+  "TopSellingBooks": [
+    {
+      "BookID": 5,
+      "Book": {
+        "ID": 5,
+        "Title": "You Don't Know JS",
+        "AuthorID": 4,
+        "Author": {
+          "ID": 4,
+          "FirstName": "Kyle",
+          "LastName": "Simpson",
+          "Bio": "JavaScript educator and open-source contributor."
+        },
+        "Genres": [
+          "JavaScript",
+          "Web Development"
+        ],
+        "PublishedAt": "0001-01-01T00:00:00Z",
+        "Price": 29.99,
+        "Stock": 11
+      },
+      "Quantity": 6
+    },
+    {
+      "BookID": 2,
+      "Book": {
+        "ID": 2,
+        "Title": "Design Patterns",
+        "AuthorID": 2,
+        "Author": {
+          "ID": 2,
+          "FirstName": "Erich",
+          "LastName": "Gamma",
+          "Bio": "Software engineer and one of the 'Gang of Four'."
+        },
+        "Genres": [
+          "Software Architecture",
+          "Object-Oriented Design"
+        ],
+        "PublishedAt": "0001-01-01T00:00:00Z",
+        "Price": 55.5,
+        "Stock": 8
+      },
+      "Quantity": 1
+    }
+  ]
+}
