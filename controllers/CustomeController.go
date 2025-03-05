@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type CustomerController struct {
@@ -20,49 +22,36 @@ func NewCustomerController(s *services.CustomerService) *CustomerController {
 	return &CustomerController{service: s}
 }
 
-func (cc *CustomerController) CreateCustomer(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
 
-	var customer models.Customer
-	if err := json.NewDecoder(r.Body).Decode(&customer); err != nil {
-		WriteJSONError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	created, err := cc.service.CreateCustomer(ctx, customer)
-	if err != nil {
-		WriteJSONError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(created)
-}
 
 func (cc *CustomerController) GetCustomer(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 2 {
-		WriteJSONError(w, http.StatusBadRequest, "invalid path")
-		return
-	}
-	if len(parts) == 2 || (len(parts) == 3 && parts[2] == "") {
-		cc.ListCustomers(w, r)
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	id, err := strconv.Atoi(parts[2])
-	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid customer ID")
+	// Extract customer ID using mux.Vars()
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing User ID")
 		return
 	}
 
+	// Convert customer ID to integer
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		WriteJSONError(w, http.StatusBadRequest, "Invalid User ID format")
+		return
+	}
+
+	// Fetch customer from the service
 	customer, getErr := cc.service.GetCustomer(ctx, id)
 	if getErr != nil {
 		WriteJSONError(w, http.StatusNotFound, getErr.Error())
 		return
 	}
+
+	// Return customer data as JSON
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(customer)
 }
 
@@ -72,22 +61,22 @@ func (cc *CustomerController) UpdateCustomer(w http.ResponseWriter, r *http.Requ
 
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing customer ID")
+		WriteJSONError(w, http.StatusBadRequest, "missing User ID")
 		return
 	}
 	id, err := strconv.Atoi(parts[2])
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid customer ID")
+		WriteJSONError(w, http.StatusBadRequest, "invalid User ID")
 		return
 	}
 
-	var customer models.Customer
-	if err := json.NewDecoder(r.Body).Decode(&customer); err != nil {
+	var User models.User
+	if err := json.NewDecoder(r.Body).Decode(&User); err != nil {
 		WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	updated, updateErr := cc.service.UpdateCustomer(ctx, id, customer)
+	updated, updateErr := cc.service.UpdateCustomer(ctx, id, User)
 	if updateErr != nil {
 		WriteJSONError(w, http.StatusNotFound, updateErr.Error())
 		return
@@ -101,12 +90,12 @@ func (cc *CustomerController) DeleteCustomer(w http.ResponseWriter, r *http.Requ
 
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing customer ID")
+		WriteJSONError(w, http.StatusBadRequest, "missing User ID")
 		return
 	}
 	id, err := strconv.Atoi(parts[2])
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid customer ID")
+		WriteJSONError(w, http.StatusBadRequest, "invalid User ID")
 		return
 	}
 
@@ -118,7 +107,7 @@ func (cc *CustomerController) DeleteCustomer(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"message": fmt.Sprintf("Customer with ID %d successfully deleted", id),
+		"message": fmt.Sprintf("User with ID %d successfully deleted", id),
 	})
 }
 

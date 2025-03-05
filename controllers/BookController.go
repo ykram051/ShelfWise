@@ -6,11 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type BookController struct {
@@ -33,12 +33,10 @@ func (bc *BookController) CreateBook(w http.ResponseWriter, r *http.Request) {
 
 	created, err := bc.service.CreateBook(ctx, book)
 	if err != nil {
-		log.Println("Service Error:", err)
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	log.Println("Book created successfully:", created)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(created)
 }
@@ -47,22 +45,29 @@ func (bc *BookController) GetBook(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing book ID")
-		return
-	}
-	id, err := strconv.Atoi(parts[2])
-	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid book ID")
+	// Extract book ID using mux
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing book ID")
 		return
 	}
 
+	// Convert book ID to integer
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		WriteJSONError(w, http.StatusBadRequest, "Invalid book ID format")
+		return
+	}
+
+	// Fetch the book from the database
 	book, err := bc.service.GetBook(ctx, id)
 	if err != nil {
 		WriteJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
+
+	// Return the book as JSON
 	json.NewEncoder(w).Encode(book)
 }
 
@@ -70,16 +75,20 @@ func (bc *BookController) UpdateBook(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing book ID")
+	// Extract book ID using mux
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing book ID")
 		return
 	}
-	id, err := strconv.Atoi(parts[2])
+
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid book ID")
+		WriteJSONError(w, http.StatusBadRequest, "Invalid book ID")
 		return
 	}
+
 	var book models.Book
 	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
 		WriteJSONError(w, http.StatusBadRequest, err.Error())
@@ -98,15 +107,17 @@ func (bc *BookController) DeleteBook(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing book ID")
+	// Extract book ID using mux
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing book ID")
 		return
 	}
 
-	id, err := strconv.Atoi(parts[2])
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid book ID")
+		WriteJSONError(w, http.StatusBadRequest, "Invalid book ID")
 		return
 	}
 

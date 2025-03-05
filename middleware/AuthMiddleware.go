@@ -132,6 +132,10 @@ func (m *AuthMiddleware) checkRoleAccess(r *http.Request, userID int, role strin
 		return role == "admin"
 	}
 
+	if strings.HasPrefix(path, "/api/customers") && !strings.HasPrefix(path, "/api/customers/"){
+		return role == "admin"
+	}
+
 	// Customer profile access: Customers can only view/edit their own profiles
 	if strings.HasPrefix(path, "/api/customers/") {
 		if role == "admin" {

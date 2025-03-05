@@ -77,22 +77,67 @@ func (r *AuthorRepository) UpdateAuthor(id int, author models.Author) (models.Au
 }
 
 func (r *AuthorRepository) DeleteAuthor(id int) error {
-	var author models.Author
-	err := r.db.NewSelect().Model(&author).Where("id = ?", id).Scan(context.Background())
+	ctx := context.Background()
+
+	log.Println("Starting deletion process for Author ID:", id)
+
+	// ✅ Step 1: Check if the author exists
+	var authorExists bool
+	err := r.db.NewSelect().
+		Table("authors").
+		ColumnExpr("COUNT(*) > 0").
+		Where("id = ?", id).
+		Scan(ctx, &authorExists)
+
 	if err != nil {
-		log.Println("Author not found:", err)
+		log.Println("Database error checking author existence:", err)
+		return fmt.Errorf("error checking author existence: %w", err)
+	}
+
+	if !authorExists {
+		log.Println("Author not found:", id)
 		return fmt.Errorf("author with ID %d not found", id)
 	}
 
-	_, err = r.db.NewDelete().
+	log.Println("Author exists. Proceeding to check for books.")
+
+	// ✅ Step 2: Check if the author has associated books
+	var bookCount int
+	err = r.db.NewSelect().
+		Table("books").
+		ColumnExpr("COUNT(*)").
+		Where("author_id = ?", id).
+		Scan(ctx, &bookCount)
+
+	if err != nil {
+		log.Println("Error checking associated books:", err)
+		return fmt.Errorf("error checking associated books: %w", err)
+	}
+
+	log.Println("Book count for author:", id, "=", bookCount)
+
+	if bookCount > 0 {
+		log.Println("Cannot delete author:", id, "because they have", bookCount, "associated books")
+		return fmt.Errorf("cannot delete author with ID %d because they have associated books", id)
+	}
+
+	log.Println("No associated books. Proceeding with deletion.")
+
+	// ✅ Step 3: Proceed with deletion if no books exist
+	result, err := r.db.NewDelete().
 		Model((*models.Author)(nil)).
 		Where("id = ?", id).
-		Exec(context.Background())
+		Exec(ctx)
+
 	if err != nil {
-		if strings.Contains(err.Error(), "SQLSTATE 23503") {
-			return fmt.Errorf("cannot delete author with ID %d because they have associated books", id) 
-		}
+		log.Println("Error deleting author:", err)
 		return fmt.Errorf("error deleting author: %w", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		log.Println("Author with ID", id, "not found during deletion.")
+		return fmt.Errorf("author with ID %d not found", id)
 	}
 
 	log.Println("Author successfully deleted:", id)

@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type AuthorController struct {
@@ -39,30 +40,32 @@ func (ac *AuthorController) CreateAuthor(w http.ResponseWriter, r *http.Request)
 }
 
 func (ac *AuthorController) GetAuthor(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 2 {
-		WriteJSONError(w, http.StatusBadRequest, "invalid path")
-		return
-	}
-
-	if len(parts) == 2 || (len(parts) == 3 && parts[2] == "") {
-		ac.ListAuthors(w, r)
-		return
-	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	id, err := strconv.Atoi(parts[2])
-	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid author ID")
+	// Extract author ID using mux.Vars()
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing author ID")
 		return
 	}
 
+	// Convert author ID to integer
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		WriteJSONError(w, http.StatusBadRequest, "Invalid author ID format")
+		return
+	}
+
+	// Fetch the author from the database
 	author, getErr := ac.service.GetAuthor(ctx, id)
 	if getErr != nil {
 		WriteJSONError(w, http.StatusNotFound, getErr.Error())
 		return
 	}
+
+	// Return the author as JSON
 	json.NewEncoder(w).Encode(author)
 }
 
@@ -70,15 +73,17 @@ func (ac *AuthorController) UpdateAuthor(w http.ResponseWriter, r *http.Request)
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing author ID")
+	// Extract author ID using mux.Vars()
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing author ID")
 		return
 	}
 
-	id, err := strconv.Atoi(parts[2])
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid author ID")
+		WriteJSONError(w, http.StatusBadRequest, "Invalid author ID")
 		return
 	}
 
@@ -103,20 +108,22 @@ func (ac *AuthorController) DeleteAuthor(w http.ResponseWriter, r *http.Request)
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing author ID")
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing author ID")
 		return
 	}
-	id, err := strconv.Atoi(parts[2])
+
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid author ID")
+		WriteJSONError(w, http.StatusBadRequest, "Invalid author ID")
 		return
 	}
 
 	err = ac.service.DeleteAuthor(ctx, id)
 	if err != nil {
-		WriteJSONError(w, http.StatusConflict, "error deleting author because the author has associated books")
+		WriteJSONError(w, http.StatusConflict, err.Error())
 		return
 	}
 

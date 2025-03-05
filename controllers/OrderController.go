@@ -6,10 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type OrderController struct {
@@ -25,45 +28,74 @@ func (oc *OrderController) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var order models.Order
+
+	// Decode request JSON
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-		WriteJSONError(w, http.StatusBadRequest, err.Error())
+		WriteJSONError(w, http.StatusBadRequest, "Invalid JSON format")
 		return
 	}
+
+	// Get authenticated user info from JWT token
+	authenticatedUserID, err := strconv.Atoi(r.Header.Get("X-User-ID"))
+	if err != nil {
+		WriteJSONError(w, http.StatusUnauthorized, "Invalid authentication")
+		return
+	}
+	authenticatedUserRole := r.Header.Get("X-User-Role")
+
+	// Log user ID for debugging
+	log.Printf("Authenticated User ID: %d, Role: %s, Request UserID: %d\n", authenticatedUserID, authenticatedUserRole, order.UserID)
+
+	// Restrict customers to only create orders for themselves
+	if authenticatedUserRole == "customer" {
+		if order.UserID != authenticatedUserID {
+			WriteJSONError(w, http.StatusForbidden, "Customers can only place orders for themselves")
+			return
+		}
+	} else if authenticatedUserRole == "admin" {
+		// Ensure admin-provided user_id exists
+		if order.UserID == 0 {
+			WriteJSONError(w, http.StatusBadRequest, "Admin must provide a valid user_id")
+			return
+		}
+	}
+
+	// Allow order creation
 	created, err := oc.service.CreateOrder(ctx, order)
 	if err != nil {
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(created)
 }
 
 func (oc *OrderController) GetOrder(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 2 {
-		WriteJSONError(w, http.StatusBadRequest, "invalid path")
-		return
-	}
-
-	if len(parts) == 2 || (len(parts) == 3 && parts[2] == "") {
-		oc.ListOrders(w, r)
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	id, err := strconv.Atoi(parts[2])
-	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid order ID")
+	// Extract order ID using mux
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing order ID")
 		return
 	}
 
-	order, getErr := oc.service.GetOrder(ctx, id)
-	if getErr != nil {
-		WriteJSONError(w, http.StatusNotFound, getErr.Error())
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		WriteJSONError(w, http.StatusBadRequest, "Invalid order ID format")
 		return
 	}
+
+	// Fetch order from database
+	order, err := oc.service.GetOrder(ctx, id)
+	if err != nil {
+		WriteJSONError(w, http.StatusNotFound, "Order not found")
+		return
+	}
+
 	json.NewEncoder(w).Encode(order)
 }
 
@@ -71,14 +103,17 @@ func (oc *OrderController) UpdateOrder(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing order ID")
+	// Extract order ID using mux
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing order ID")
 		return
 	}
-	id, err := strconv.Atoi(parts[2])
+
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid order ID")
+		WriteJSONError(w, http.StatusBadRequest, "Invalid order ID")
 		return
 	}
 
@@ -100,15 +135,17 @@ func (oc *OrderController) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		WriteJSONError(w, http.StatusBadRequest, "missing order ID")
+	// Extract order ID using mux
+	vars := mux.Vars(r)
+	idStr, exists := vars["id"]
+	if !exists {
+		WriteJSONError(w, http.StatusBadRequest, "Missing order ID")
 		return
 	}
 
-	id, err := strconv.Atoi(parts[2])
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		WriteJSONError(w, http.StatusBadRequest, "invalid order ID")
+		WriteJSONError(w, http.StatusBadRequest, "Invalid order ID")
 		return
 	}
 
@@ -129,7 +166,20 @@ func (oc *OrderController) ListOrders(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	orders, err := oc.service.ListOrders(ctx)
+	authenticatedUserID, err := strconv.Atoi(r.Header.Get("X-User-ID"))
+	if err != nil {
+		WriteJSONError(w, http.StatusUnauthorized, "Invalid authentication")
+		return
+	}
+	authenticatedUserRole := r.Header.Get("X-User-Role")
+
+	var orders []models.Order
+	if authenticatedUserRole == "admin" {
+		orders, err = oc.service.ListOrders(ctx) // ✅ Admins see all orders
+	} else {
+		orders, err = oc.service.SearchOrdersByCustomerID(ctx, authenticatedUserID) // ✅ Customers see only their orders
+	}
+
 	if err != nil {
 		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return

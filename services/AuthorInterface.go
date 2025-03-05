@@ -122,3 +122,4 @@ func (s *AuthorService) SearchAuthors(ctx context.Context, criteria models.Autho
 	}
 	return s.authorRepo.SearchAuthors(criteria)
 }
+
