@@ -26,11 +26,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, order models.Order) (mod
 	default:
 	}
 
-	customer, err := s.customerstore.GetCustomer(order.CustomerID)
+	User, err := s.customerstore.GetCustomer(order.UserID)
 	if err != nil {
-		return models.Order{}, fmt.Errorf("customer with ID %d not found .", order.CustomerID)
+		return models.Order{}, fmt.Errorf("User with ID %d not found .", order.UserID)
 	}
-	order.Customer = &customer
+	order.User = &User
 
 	var total float64
 	for i, item := range order.Items {
@@ -191,5 +191,5 @@ func (s *OrderService) SearchOrdersByCustomerID(ctx context.Context, customerID 
 		return nil, ctx.Err()
 	default:
 	}
-	return s.store.SearchOrdersByCustomerID(customerID)
+	return s.store.SearchOrdersByUserID(customerID)
 }
