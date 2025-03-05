@@ -1,0 +1,52 @@
+{
+  "ID": 136,
+  "Timestamp": "2025-03-05T00:00:01.0136277Z",
+  "TotalRevenue": 171.96,
+  "TotalOrders": 3,
+  "TopSellingBooks": [
+    {
+      "BookID": 1,
+      "Book": {
+        "ID": 1,
+        "Title": "The Go Programming Language",
+        "AuthorID": 1,
+        "Author": {
+          "ID": 1,
+          "FirstName": "Alan",
+          "LastName": "Donovan",
+          "Bio": "Go expert and author"
+        },
+        "Genres": [
+          "Programming",
+          "Technology"
+        ],
+        "PublishedAt": "2015-10-26T00:00:00Z",
+        "Price": 39.99,
+        "Stock": 8
+      },
+      "Quantity": 2
+    },
+    {
+      "BookID": 2,
+      "Book": {
+        "ID": 2,
+        "Title": "Clean Code",
+        "AuthorID": 2,
+        "Author": {
+          "ID": 2,
+          "FirstName": "Robert",
+          "LastName": "Martin",
+          "Bio": "Software engineer and author of multiple books."
+        },
+        "Genres": [
+          "Software Development",
+          "Best Practices"
+        ],
+        "PublishedAt": "2008-08-01T00:00:00Z",
+        "Price": 45.99,
+        "Stock": 13
+      },
+      "Quantity": 2
+    }
+  ]
+}
