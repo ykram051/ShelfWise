@@ -10,11 +10,10 @@ import (
 
 // CustomerStore interface
 type CustomerStore interface {
-	CreateCustomer(c models.Customer) (models.Customer, error)
-	GetCustomer(id int) (models.Customer, error)
-	UpdateCustomer(id int, c models.Customer) (models.Customer, error)
+	GetCustomer(id int) (models.User, error)
+	UpdateCustomer(id int, c models.User) (models.User, error)
 	DeleteCustomer(id int) error
-	ListCustomers() ([]models.Customer, error)
+	ListCustomers() ([]models.User, error)
 }
 
 // PostgreSQL-backed implementation of CustomerStore
@@ -26,78 +25,69 @@ func NewCustomerRepository(db *bun.DB) *CustomerRepository {
 	return &CustomerRepository{db: db}
 }
 
-// CreateCustomer inserts a new customer
-func (r *CustomerRepository) CreateCustomer(customer models.Customer) (models.Customer, error) {
-	_, err := r.db.NewInsert().Model(&customer).Exec(context.Background())
+// GetCustomer fetches a User by ID
+func (r *CustomerRepository) GetCustomer(id int) (models.User, error) {
+	var User models.User
+	err := r.db.NewSelect().Model(&User).Where("id = ?", id).Scan(context.Background())
 	if err != nil {
-		return models.Customer{}, fmt.Errorf("error inserting customer: %w", err)
+		return models.User{}, fmt.Errorf("User not found with ID %d", id)
 	}
-	return customer, nil
+	return User, nil
 }
 
-// GetCustomer fetches a customer by ID
-func (r *CustomerRepository) GetCustomer(id int) (models.Customer, error) {
-	var customer models.Customer
-	err := r.db.NewSelect().Model(&customer).Where("id = ?", id).Scan(context.Background())
-	if err != nil {
-		return models.Customer{}, fmt.Errorf("customer not found with ID %d", id)
-	}
-	return customer, nil
-}
-
-// UpdateCustomer modifies an existing customer
-func (r *CustomerRepository) UpdateCustomer(id int, customer models.Customer) (models.Customer, error) {
-	// Retrieve the existing customer to preserve `CreatedAt`
-	var existingCustomer models.Customer
+// UpdateCustomer modifies an existing User
+func (r *CustomerRepository) UpdateCustomer(id int, User models.User) (models.User, error) {
+	// Retrieve the existing User to preserve `CreatedAt`
+	var existingCustomer models.User
 	err := r.db.NewSelect().Model(&existingCustomer).Where("id = ?", id).Scan(context.Background())
 	if err != nil {
-		return models.Customer{}, fmt.Errorf("customer with ID %d not found", id)
+		return models.User{}, fmt.Errorf("User with ID %d not found", id)
 	}
 
-	customer.ID = id
-	customer.CreatedAt = existingCustomer.CreatedAt
+	User.ID = id
+	User.CreatedAt = existingCustomer.CreatedAt
 
 	_, err = r.db.NewUpdate().
-		Model(&customer).
+		Model(&User).
 		Column("name", "email",
 			"street", "city", "state", "postal_code", "country").
 		Where("id = ?", id).
 		Exec(context.Background())
 
 	if err != nil {
-		return models.Customer{}, fmt.Errorf("error updating customer: %w", err)
+		return models.User{}, fmt.Errorf("error updating User: %w", err)
 	}
 
-	return customer, nil
+	return User, nil
 }
 
-// DeleteCustomer removes a customer
+// DeleteCustomer removes a User
 func (r *CustomerRepository) DeleteCustomer(id int) error {
-	var customer models.Customer
-	err := r.db.NewSelect().Model(&customer).Where("id = ?", id).Scan(context.Background())
+	var User models.User
+	err := r.db.NewSelect().Model(&User).Where("id = ?", id).Scan(context.Background())
 	if err != nil {
-		return fmt.Errorf("customer with ID %d not found", id)
+		return fmt.Errorf("User with ID %d not found", id)
 	}
 
 	result, err := r.db.NewDelete().
-		Model((*models.Customer)(nil)).
+		Model((*models.User)(nil)).
 		Where("id = ?", id).
 		Exec(context.Background())
 
 	if err != nil {
-		return fmt.Errorf("error deleting customer: %w", err)
+		return fmt.Errorf("error deleting User: %w", err)
 	}
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return fmt.Errorf("customer with ID %d not found", id)
+		return fmt.Errorf("User with ID %d not found", id)
 	}
 
 	return nil
 }
 
 // ListCustomers fetches all customers
-func (r *CustomerRepository) ListCustomers() ([]models.Customer, error) {
-	var customers []models.Customer
+func (r *CustomerRepository) ListCustomers() ([]models.User, error) {
+	var customers []models.User
 	err := r.db.NewSelect().Model(&customers).Scan(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving customers: %w", err)

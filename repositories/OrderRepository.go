@@ -17,7 +17,7 @@ type OrderStore interface {
 	DeleteOrder(id int) error
 	ListOrders() ([]models.Order, error)
 	GetOrdersByDateRange(from, to time.Time) ([]models.Order, error)
-	SearchOrdersByCustomerID(customerID int) ([]models.Order, error)
+	SearchOrdersByUserID(UserID int) ([]models.Order, error)
 }
 
 // PostgreSQL-backed implementation of OrderStore
@@ -56,13 +56,13 @@ func (r *OrderRepository) CreateOrder(order models.Order) (models.Order, error) 
 	return order, nil
 }
 
-// GetOrder fetches an order by ID with related customer and items
+// GetOrder fetches an order by ID with related User and items
 func (r *OrderRepository) GetOrder(id int) (models.Order, error) {
 	var order models.Order
 	err := r.db.NewSelect().
 		Model(&order).
 		Where("?TableAlias.id = ?", id).
-		Relation("Customer").
+		Relation("User").
 		Relation("Items.Book").
 		Relation("Items.Book.Author").
 		Scan(context.Background())
@@ -80,7 +80,7 @@ func (r *OrderRepository) GetOrdersByDateRange(from, to time.Time) ([]models.Ord
 	err := r.db.NewSelect().
 		Model(&orders).
 		Where("?TableAlias.created_at BETWEEN ? AND ?", from, to, from.UTC(), to.UTC()).
-		Relation("Customer").
+		Relation("User").
 		Relation("Items.Book.Author").
 		Scan(context.Background())
 
@@ -95,7 +95,7 @@ func (r *OrderRepository) ListOrders() ([]models.Order, error) {
 	var orders []models.Order
 	err := r.db.NewSelect().
 		Model(&orders).
-		Relation("Customer").
+		Relation("User").
 		Relation("Items.Book").
 		Relation("Items.Book.Author").
 		Scan(context.Background())
@@ -172,7 +172,7 @@ func (r *OrderRepository) UpdateOrder(id int, order models.Order) (models.Order,
 	err = r.db.NewSelect().
 		Model(&updatedOrder).
 		Where("?TableAlias.id = ?", id).
-		Relation("Customer").
+		Relation("User").
 		Relation("Items.Book.Author").
 		Scan(context.Background())
 
@@ -210,28 +210,28 @@ func (r *OrderRepository) DeleteOrder(id int) error {
 	return nil
 }
 
-func (r *OrderRepository) SearchOrdersByCustomerID(customerID int) ([]models.Order, error) {
+func (r *OrderRepository) SearchOrdersByUserID(UserID int) ([]models.Order, error) {
 	var orders []models.Order
 
-	var customer models.Customer
+	var User models.User
 	err := r.db.NewSelect().
-		Model(&customer).
-		Where("id = ?", customerID).
+		Model(&User).
+		Where("id = ?", UserID).
 		Scan(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("customer with ID %d not found", customerID)
+		return nil, fmt.Errorf("User with ID %d not found", UserID)
 	}
 
 	err = r.db.NewSelect().
 		Model(&orders).
-		Where("?TableAlias.customer_id = ?", customerID).
-		Relation("Customer").
+		Where("?TableAlias.User_id = ?", UserID).
+		Relation("User").
 		Relation("Items.Book.Author").
 		Scan(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving orders for customer ID %d: %w", customerID, err)
+		return nil, fmt.Errorf("error retrieving orders for User ID %d: %w", UserID, err)
 	}
 
 	return orders, nil
